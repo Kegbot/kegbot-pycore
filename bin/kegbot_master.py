@@ -122,7 +122,7 @@ def _GetConfigParser():
 
 class KegbotMasterApp(app.App):
   def _Setup(self):
-    app.App._Setup(self)
+    super(KegbotMasterApp, self)._Setup()
     _ExtendPath()
     self._config = _GetConfigParser()
     self._commands = {}
