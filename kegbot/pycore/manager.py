@@ -689,7 +689,6 @@ class SubscriptionManager(Manager):
   def __init__(self, name, event_hub, server):
     Manager.__init__(self, name, event_hub)
     self._server = server
-  @EventHandler(kbevent.CreditAddedEvent)
   @EventHandler(kbevent.DrinkCreatedEvent)
   @EventHandler(kbevent.FlowUpdate)
   @EventHandler(kbevent.SetRelayOutputEvent)

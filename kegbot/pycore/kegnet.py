@@ -200,10 +200,6 @@ class KegnetClient(KegnetProtocolHandler):
     return 0
 
   ### convenience functions
-  def SendPing(self):
-    message = kbevent.Ping()
-    return self.SendMessage(message)
-
   def SendMeterUpdate(self, tap_name, meter_reading):
     message = kbevent.MeterUpdate()
     message.tap_name = tap_name
@@ -269,8 +265,6 @@ class SimpleKegnetClient(KegnetClient):
       self.onFlowUpdate(event)
     elif isinstance(event, kbevent.DrinkCreatedEvent):
       self.onDrinkCreated(event)
-    elif isinstance(event, kbevent.CreditAddedEvent):
-      self.onCreditAdded(event)
     elif isinstance(event, kbevent.SetRelayOutputEvent):
       self.onSetRelayOutput(event)
 
@@ -278,9 +272,6 @@ class SimpleKegnetClient(KegnetClient):
     pass
 
   def onDrinkCreated(self, event):
-    pass
-
-  def onCreditAdded(self, event):
     pass
 
   def onSetRelayOutput(self, event):

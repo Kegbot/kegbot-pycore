@@ -65,9 +65,6 @@ class Ping(Event):
 class QuitEvent(Event):
   pass
 
-class StartCompleteEvent(Event):
-  pass
-
 class MeterUpdate(Event):
   tap_name = EventField()
   reading = EventField()
@@ -87,9 +84,6 @@ class FlowUpdate(Event):
   last_activity_time = EventField()
   ticks = EventField()
   volume_ml = EventField()
-
-class TapIdleEvent(Event):
-  tap_name = EventField()
 
 class DrinkCreatedEvent(Event):
   flow_id = EventField()
@@ -126,9 +120,6 @@ class HeartbeatSecondEvent(Event):
 class HeartbeatMinuteEvent(Event):
   pass
 
-class HeartbeatHourEvent(Event):
-  pass
-
 class SetRelayOutputEvent(Event):
   class Mode:
     ENABLED = "enabled"
@@ -136,9 +127,6 @@ class SetRelayOutputEvent(Event):
   output_name = EventField()
   output_mode = EventField()
 
-class CreditAddedEvent(Event):
-  amount = EventField()
-  username = EventField()
 
 EVENT_NAME_TO_CLASS = {}
 for cls in Event.__subclasses__():

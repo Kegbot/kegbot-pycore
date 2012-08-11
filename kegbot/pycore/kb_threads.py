@@ -71,10 +71,6 @@ class HeartbeatThread(CoreThread):
       if (seconds % 60) == 0:
         event = kbevent.HeartbeatMinuteEvent()
         hub.PublishEvent(event)
-      if (seconds % 3600) == 0:
-        event = kbevent.HeartbeatHourEvent()
-        hub.PublishEvent(event)
-        seconds = 0
 
 
 class EventHandlerThread(CoreThread):
