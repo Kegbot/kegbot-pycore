@@ -15,3 +15,4 @@ app), Pycore is supported in maintenance mode.
   overview
   install-pycore
   run-daemons
+  changelog
