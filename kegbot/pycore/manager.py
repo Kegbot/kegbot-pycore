@@ -459,7 +459,7 @@ class DrinkManager(Manager):
       self._logger.warning('No drink recorded.')
       return
 
-    keg_id = d.keg_id or None
+    keg_id = d.get('keg_id', None)
     username = d.get('user_id', None)
 
     self._logger.info('Logged drink %s username=%s keg=%s liters=%.2f ticks=%i' % (
