@@ -52,7 +52,7 @@ packets, and sends them onward to the Core for interpretation.
 
 As shown in the diagram, you can actually run multiple instances of this
 program, each one talking to its own Kegboard.  This is one way to scale up your
-Kegbot system if you want to support many taps, or taps in different phyiscal
+Kegbot system if you want to support many taps, or taps in different physical
 locations.
 
 Life of a Pour
