@@ -3,6 +3,11 @@
 Changelog
 =========
 
+Version 1.0.2 (2012-10-30)
+--------------------------
+
+* Fixed a crash that occurred when starting kegbot_core.
+
 Version 1.0.1 (2012-10-18)
 --------------------------
 

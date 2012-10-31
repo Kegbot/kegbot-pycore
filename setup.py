@@ -4,7 +4,7 @@
 
 DOCLINES = __doc__.split('\n')
 
-VERSION = '1.0.1'
+VERSION = '1.0.2'
 SHORT_DESCRIPTION = DOCLINES[0]
 LONG_DESCRIPTION = '\n'.join(DOCLINES[2:])
 

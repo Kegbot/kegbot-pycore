@@ -131,7 +131,6 @@ class KegbotCoreApp(app.App):
     self._env = KegbotEnv()
 
   def _MainLoop(self):
-    self._env.GetEventHub().PublishEvent(event)
     watchdog = self._env.GetWatchdogThread()
     while not self._do_quit:
       try:
