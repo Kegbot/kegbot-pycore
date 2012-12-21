@@ -27,7 +27,6 @@ def setup_package():
         'distribute_setup.py',
         'bin/kegboard_daemon.py',
         'bin/kegbot_core.py',
-        'bin/kegbot_master.py',
         'bin/lcd_daemon.py',
         'bin/rfid_daemon.py',
         'bin/test_flow.py',
