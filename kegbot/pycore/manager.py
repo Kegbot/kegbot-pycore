@@ -20,6 +20,7 @@
 
 from __future__ import absolute_import
 
+import collections
 import datetime
 import gflags
 import inspect
@@ -453,15 +454,32 @@ class DrinkManager(Manager):
   def __init__(self, event_hub, backend):
     super(DrinkManager, self).__init__(event_hub)
     self._backend = backend
+    self._pending = collections.deque()
 
   @EventHandler(kbevent.FlowUpdate)
   def HandleFlowUpdateEvent(self, event):
     """Attempt to save a drink record and derived data for |flow|"""
     if event.state == event.FlowState.COMPLETED:
-      self._HandleFlowEnded(event)
+      self._logger.info('Flow completed: flow_id=0x%08x' % event.flow_id)
+      self._pending.append(event)
+      self._FlushPending()
 
-  def _HandleFlowEnded(self, event):
-    self._logger.info('Flow completed: flow_id=0x%08x' % event.flow_id)
+  @EventHandler(kbevent.HeartbeatMinuteEvent)
+  def _HandleHeartbeat(self, event):
+    self._FlushPending()
+
+  def _FlushPending(self):
+    while len(self._pending):
+      event = self._pending.popleft()
+      try:
+        self._PostDrink(event)
+      except Exception, e:
+        self._logger.warning('Error posting drink: %s' % e)
+        self._pending.appendleft(event)
+        break
+
+  def _PostDrink(self, event):
+    self._logger.info('Processing pending drink: flow_id=0x%08x' % event.flow_id)
 
     ticks = event.ticks
     username = event.username
