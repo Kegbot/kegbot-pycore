@@ -6,4 +6,4 @@
 distribute-*
 *egg-info
 dist/
-
+docs/build/
