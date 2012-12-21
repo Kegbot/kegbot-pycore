@@ -63,17 +63,14 @@ class KegbotEnv(object):
     self._backend = backend.WebBackend()
 
     # Build managers
-    self._tap_manager = manager.TapManager('tap-manager', self._event_hub)
-    self._flow_manager = manager.FlowManager('flow-manager', self._event_hub,
-        self._tap_manager)
-    self._authentication_manager = manager.AuthenticationManager('auth-manager',
+    self._tap_manager = manager.TapManager(self._event_hub, self._backend)
+    self._flow_manager = manager.FlowManager(self._event_hub, self._tap_manager)
+    self._authentication_manager = manager.AuthenticationManager(
         self._event_hub, self._flow_manager, self._tap_manager, self._backend)
-    self._drink_manager = manager.DrinkManager('drink-manager', self._event_hub,
-        self._backend)
-    self._thermo_manager = manager.ThermoManager('thermo-manager',
-        self._event_hub, self._backend)
-    self._subscription_manager = manager.SubscriptionManager('pubsub',
-        self._event_hub, self._kegnet_server)
+    self._drink_manager = manager.DrinkManager(self._event_hub, self._backend)
+    self._thermo_manager = manager.ThermoManager(self._event_hub, self._backend)
+    self._subscription_manager = manager.SubscriptionManager(self._event_hub,
+        self._kegnet_server)
 
     # Build threads
     self._threads = set()
@@ -146,31 +143,9 @@ class KegbotCoreApp(app.App):
 
   def _Setup(self):
     app.App._Setup(self)
-
-    self._logger.info('Querying backend liveness.')
-    try:
-      taps = self._env.GetBackend().GetAllTaps()
-    except socket.error, e:
-      self._logger.error('Kegbot backend was unreachable due to socket error: '
-          '%s' % e)
-      if FLAGS.web_backend:
-        self._logger.error('Is --api_url correct? (current=%s)' % FLAGS.api_url)
-      sys.exit(1)
-    except kbapi.ServerError, e:
-      self._logger.error('Kegbot API backend returned a server error: %s' % e)
-      self._logger.error('Is --api_url correct? (current=%s)' % FLAGS.api_url)
-      sys.exit(1)
-    self._logger.info('Backend appears to be alive.')
-
-    self._logger.info('Found %i tap%s, adding to tap manager.' % (len(taps),
-        ('s', '')[len(taps) == 1]))
-    for tap in taps:
-      # TODO: get rid of max_tick_delta parameter entirely
-      self._env.GetTapManager().RegisterTap(tap.meter_name, tap.ml_per_tick,
-          (1/tap.ml_per_tick*500), relay_name=tap.relay_name)
-
     for thr in self._env.GetThreads():
       self._AddAppThread(thr)
+    self._env.GetEventHub().PublishEvent(kbevent.StartedEvent())
 
   def Quit(self):
     self._do_quit = True

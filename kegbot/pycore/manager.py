@@ -21,7 +21,10 @@
 from __future__ import absolute_import
 
 import datetime
+import gflags
 import inspect
+import requests
+import socket
 import time
 import threading
 import logging
@@ -34,7 +37,7 @@ from . import kbevent
 from kegbot.api import kbapi
 from kegbot.util import util
 
-
+FLAGS = gflags.FLAGS
 
 class TapManagerError(Exception):
   """ Generic TapManager error """
@@ -55,9 +58,9 @@ def EventHandler(event_type):
   return decorate
 
 
-class Manager:
-  def __init__(self, name, event_hub):
-    self._name = name
+class Manager(object):
+  def __init__(self, event_hub):
+    self._name = self.__class__.__name__
     self._event_hub = event_hub
     self._logger = logging.getLogger(self._name)
 
@@ -109,8 +112,9 @@ class TapManager(Manager):
   taps.
   """
 
-  def __init__(self, name, event_hub):
-    Manager.__init__(self, name, event_hub)
+  def __init__(self, event_hub, backend):
+    super(TapManager, self).__init__(event_hub)
+    self._backend = backend
     self._taps = {}
 
   def TapExists(self, name):
@@ -143,6 +147,33 @@ class TapManager(Manager):
     delta = meter.SetTicks(value, when=when)
     return delta
 
+  @EventHandler(kbevent.StartedEvent)
+  @EventHandler(kbevent.HeartbeatMinuteEvent)
+  def _HandleHeartbeat(self, event):
+    taps = None
+
+    try:
+      taps = self._backend.GetAllTaps()
+    except requests.exceptions.ConnectionError, e:
+      self._logger.error('Kegbot backend was unreachable due to socket error: '
+          '%s' % e)
+    except kbapi.ServerError, e:
+      self._logger.error('Kegbot API backend returned a server error: %s' % e)
+
+    if taps is None:
+      self._logger.error('Could not sync taps. Is --api_url correct? (current=%s)' % FLAGS.api_url)
+      return
+
+    update = False
+    for tap in taps:
+      if self.TapExists(tap.meter_name):
+        continue
+      update = True
+      self.RegisterTap(tap.meter_name, tap.ml_per_tick,
+          (1/tap.ml_per_tick*500), relay_name=tap.relay_name)
+
+    if update:
+      self._logger.info('Updated taps: %s' % self._taps)
 
 class Flow:
   def __init__(self, tap, flow_id, username=None, max_idle_secs=10):
@@ -244,8 +275,8 @@ class FlowManager(Manager):
     - Explicitly, by a call to StartFlow
     - Implicitly, by a call to HandleTapActivity
   """
-  def __init__(self, name, event_hub, tap_manager):
-    Manager.__init__(self, name, event_hub)
+  def __init__(self, event_hub, tap_manager):
+    super(FlowManager, self).__init__(event_hub)
     self._tap_manager = tap_manager
     self._flow_map = {}
     self._logger = logging.getLogger("flowmanager")
@@ -419,8 +450,8 @@ class FlowManager(Manager):
 
 
 class DrinkManager(Manager):
-  def __init__(self, name, event_hub, backend):
-    Manager.__init__(self, name, event_hub)
+  def __init__(self, event_hub, backend):
+    super(DrinkManager, self).__init__(event_hub)
     self._backend = backend
 
   @EventHandler(kbevent.FlowUpdate)
@@ -477,8 +508,8 @@ class DrinkManager(Manager):
 
 
 class ThermoManager(Manager):
-  def __init__(self, name, event_hub, backend):
-    Manager.__init__(self, name, event_hub)
+  def __init__(self, event_hub, backend):
+    super(ThermoManager, self).__init__(event_hub)
     self._backend = backend
     self._name_to_last_record = {}
     self._sensor_log = {}
@@ -581,8 +612,8 @@ class TokenRecord:
 
 
 class AuthenticationManager(Manager):
-  def __init__(self, name, event_hub, flow_manager, tap_manager, backend):
-    Manager.__init__(self, name, event_hub)
+  def __init__(self, event_hub, flow_manager, tap_manager, backend):
+    super(AuthenticationManager, self).__init__(event_hub)
     self._flow_manager = flow_manager
     self._tap_manager = tap_manager
     self._backend = backend
@@ -686,9 +717,10 @@ class AuthenticationManager(Manager):
 
 
 class SubscriptionManager(Manager):
-  def __init__(self, name, event_hub, server):
-    Manager.__init__(self, name, event_hub)
+  def __init__(self, event_hub, server):
+    super(SubscriptionManager, self).__init__(event_hub)
     self._server = server
+
   @EventHandler(kbevent.DrinkCreatedEvent)
   @EventHandler(kbevent.FlowUpdate)
   @EventHandler(kbevent.SetRelayOutputEvent)

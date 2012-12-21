@@ -62,6 +62,9 @@ EventField = util.BaseField
 class Ping(Event):
   pass
 
+class StartedEvent(Event):
+  pass
+
 class QuitEvent(Event):
   pass
 
