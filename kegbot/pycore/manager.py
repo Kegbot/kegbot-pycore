@@ -25,12 +25,10 @@ import datetime
 import gflags
 import inspect
 import requests
-import socket
 import time
 import threading
 import logging
 
-from . import backend
 from . import common_defs
 from . import flow_meter
 from . import kbevent
@@ -352,7 +350,6 @@ class FlowManager(Manager):
 
     self._logger.info('Stopping flow: %s' % flow)
     self._PublishRelayEvent(flow, enable=False)
-    tap = flow.GetTap()
     del self._flow_map[tap_name]
     self._StateChange(flow, kbevent.FlowUpdate.FlowState.COMPLETED)
     return flow
@@ -621,7 +618,7 @@ class TokenRecord:
     return self.status == self.STATUS_REMOVED
 
   def __hash__(self):
-    return hash((self.AsTuple(), other.AsTuple()))
+    return hash(self.AsTuple())
 
   def __cmp__(self, other):
     if not other:

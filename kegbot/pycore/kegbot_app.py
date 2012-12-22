@@ -28,15 +28,12 @@ For more information, please see the kegbot documentation.
 """
 
 import logging
-import socket
-import sys
 import time
 import warnings
 warnings.simplefilter("ignore", DeprecationWarning)
 
 import gflags
 
-from kegbot.api import kbapi
 from kegbot.util import app
 
 from . import kb_threads

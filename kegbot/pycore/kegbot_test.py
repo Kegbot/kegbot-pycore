@@ -2,11 +2,9 @@
 
 """Unittest for kegbot module"""
 
-import commands
 import datetime
 import time
 import logging
-import socket
 import unittest
 
 from django.test import TestCase

@@ -55,7 +55,7 @@ class FlowManagerTestCase(unittest.TestCase):
     # than the constant common_defs.MAX_METER_READING_DELTA should be ignored by
     # the FlowManager.
     illegal_delta = common_defs.MAX_METER_READING_DELTA + 100
-    new_reading = last_reading + illegal_delta
+    new_reading = meter.GetLastReading() + illegal_delta
     self.tap_manager.UpdateDeviceReading(name='flow0', value=new_reading)
     # The illegal update should not affect the volume.
     vol = self.flow_manager.GetDeviceVolume(name='flow0')

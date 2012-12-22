@@ -29,8 +29,6 @@ import cStringIO
 import logging
 import Queue
 import socket
-import struct
-import sys
 import threading
 import time
 

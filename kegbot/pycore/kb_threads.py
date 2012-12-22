@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import asyncore
-import datetime
 import Queue
 import time
 
@@ -10,7 +9,6 @@ import gflags
 from kegbot.util import util
 
 from . import kbevent
-from . import kegnet
 
 FLAGS = gflags.FLAGS
 
