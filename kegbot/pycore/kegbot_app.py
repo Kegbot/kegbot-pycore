@@ -131,8 +131,8 @@ class KegbotCoreApp(app.App):
     watchdog = self._env.GetWatchdogThread()
     while not self._do_quit:
       try:
-        watchdog.join(1)
-        if not watchdog.isAlive():
+        watchdog.join(0.5)
+        if not watchdog.isAlive() and not self._do_quit:
           self._logger.error("Watchdog thread exited, quitting")
           self.Quit()
           return
@@ -151,10 +151,8 @@ class KegbotCoreApp(app.App):
     self._do_quit = True
     event = kbevent.QuitEvent()
     self._env.GetEventHub().PublishEvent(event)
-    time.sleep(1.0)
-
+    time.sleep(0.5)
     self._logger.info('Stopping any remaining threads')
     self._StopThreads()
     self._logger.info('Kegbot stopped.')
-    self._TeardownLogging()
 

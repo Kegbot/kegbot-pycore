@@ -45,7 +45,7 @@ class WatchdogThread(CoreThread):
             self._kb_env.GetEventHub().PublishEvent(event)
             fault_detected = True
             break
-      time.sleep(1.0)
+      time.sleep(0.5)
 
 
 class EventHubServiceThread(CoreThread):
@@ -139,19 +139,11 @@ class EventHandlerThread(CoreThread):
 
 ### Service threads
 class NetProtocolThread(CoreThread):
-  def __init__(self, *args, **kwargs):
-    super(NetProtocolThread, self).__init__(*args, **kwargs)
-    self._server = None
-
-  def Quit(self):
-    super(NetProtocolThread, self).Quit()
-    if self._server:
-      self._server.StopServer()
-
   def ThreadMain(self):
-    self._logger.info("network thread started")
-    self._server = self._kb_env.GetKegnetServer()
-    self._server.StartServer()
+    self._logger.info('Starting network thread.')
+    server = self._kb_env.GetKegnetServer()
+    server.StartServer()
     while not self._quit:
       asyncore.loop(timeout=0.5, count=1)
-    self._server.StopServer()
+    server.StopServer()
+    self._logger.info('Network thread stopped.')
