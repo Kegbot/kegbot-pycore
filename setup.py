@@ -3,6 +3,7 @@
 
 For more information, see http://kegbot.org/docs/pycore/
 """
+from setuptools import setup, find_packages
 
 DOCLINES = __doc__.split('\n')
 
@@ -11,10 +12,6 @@ SHORT_DESCRIPTION = DOCLINES[0]
 LONG_DESCRIPTION = '\n'.join(DOCLINES[2:])
 
 def setup_package():
-  from distribute_setup import use_setuptools
-  use_setuptools()
-  from setuptools import setup, find_packages
-
   setup(
       name = 'kegbot-pycore',
       version = VERSION,
@@ -26,7 +23,6 @@ def setup_package():
       packages = find_packages(exclude=['testdata']),
       namespace_packages = ['kegbot'],
       scripts = [
-        'distribute_setup.py',
         'bin/kegboard_daemon.py',
         'bin/kegbot_core.py',
         'bin/lcd_daemon.py',
