@@ -30,6 +30,7 @@ def setup_package():
         'bin/test_flow.py',
       ],
       install_requires = [
+        'distribute',
         'kegbot-pyutils >= 0.1.4',
         'kegbot-api >= 0.1.2',
         'kegbot-kegboard >= 1.0.0',
