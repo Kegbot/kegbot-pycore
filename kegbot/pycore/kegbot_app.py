@@ -29,8 +29,6 @@ For more information, please see the kegbot documentation.
 
 import logging
 import time
-import warnings
-warnings.simplefilter("ignore", DeprecationWarning)
 
 import gflags
 
@@ -69,29 +67,29 @@ class KegbotEnv(object):
     self._subscription_manager = manager.SubscriptionManager(self._event_hub,
         self._kegnet_server)
 
+    self._AttachListeners()
+
     # Build threads
     self._threads = set()
-    self._service_thread = kb_threads.EventHandlerThread(self, 'service-thread')
-    self._service_thread.AddEventHandler(self._tap_manager)
-    self._service_thread.AddEventHandler(self._flow_manager)
-    self._service_thread.AddEventHandler(self._drink_manager)
-    self._service_thread.AddEventHandler(self._thermo_manager)
-    self._service_thread.AddEventHandler(self._authentication_manager)
-    self._service_thread.AddEventHandler(self._subscription_manager)
-
-    self.AddThread(self._service_thread)
-
     self.AddThread(kb_threads.EventHubServiceThread(self, 'eventhub-thread'))
     self.AddThread(kb_threads.NetProtocolThread(self, 'net-thread'))
     self.AddThread(kb_threads.HeartbeatThread(self, 'heartbeat-thread'))
-
     self._watchdog_thread = kb_threads.WatchdogThread(self, 'watchdog-thread')
     self.AddThread(self._watchdog_thread)
 
+  def _AllManagers(self):
+    return (self._tap_manager, self._flow_manager, self._drink_manager,
+        self._thermo_manager, self._authentication_manager,
+        self._subscription_manager)
+
+  def _AttachListeners(self):
+    for mgr in self._AllManagers():
+      for event_type, methods in mgr.GetEventHandlers().iteritems():
+        for method in methods:
+          self._event_hub.Subscribe(event_type, method)
+
   def AddThread(self, thr):
     self._threads.add(thr)
-    if isinstance(thr, kb_threads.CoreThread):
-      self.GetEventHub().AddListener(thr)
 
   def GetWatchdogThread(self):
     return self._watchdog_thread

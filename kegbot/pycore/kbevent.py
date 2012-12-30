@@ -26,6 +26,7 @@ from __future__ import absolute_import
 
 import logging
 import Queue
+import types
 
 import gflags
 
@@ -145,25 +146,29 @@ def DecodeEvent(msg):
     setattr(inst, k, v)
   return inst
 
+
 class EventHub(object):
   """Central sink and publish of events."""
-  def __init__(self):
-    self._event_listeners = set()
+  def __init__(self, debug=False):
+    self._debug = debug or FLAGS.debug_events
+    self._subscriptions = {}
     self._event_queue = Queue.Queue()
     self._logger = logging.getLogger('eventhub')
 
-  def AddListener(self, listener):
-    """Attach a listener, to be notified on receipt of a new event.
+  def Subscribe(self, event_cls, cb):
+    """Attach a listener to be notified on receipt of a new event.
 
-    The listener must implement the PostEvent(event) method.
+    The callback method must take a single argument, "event".
     """
-    if listener not in self._event_listeners:
-      self._event_listeners.add(listener)
+    if type(event_cls) == types.ClassType:
+      raise ValueError("event_cls must be a class; is a %s" % type(event_cls))
 
-  def RemoveListener(self, listener):
-    """Remove (by reference) an already-listening listener."""
-    if listener in self._event_listeners:
-      self._event_listeners.remove(listener)
+    if event_cls not in self._subscriptions:
+      self._subscriptions[event_cls] = set()
+    self._subscriptions[event_cls].add(cb)
+
+  def Unsubscribe(self, event_cls, cb):
+    self._subscriptions.get(event_cls, set()).remove(cb)
 
   def PublishEvent(self, event):
     """Add a new event to the queue of events to publish.
@@ -171,11 +176,6 @@ class EventHub(object):
     Events are dispatched to listeners in the DispatchNextEvent method.
     """
     self._event_queue.put(event)
-
-  def _IterEventListeners(self):
-    """Iterate through all listeners."""
-    for listener in self._event_listeners:
-      yield listener
 
   def _WaitForEvent(self, timeout=None):
     """Wait for a new event to be enqueued."""
@@ -189,8 +189,24 @@ class EventHub(object):
     """Wait for an event, and dispatch it to all listeners."""
     ev = self._WaitForEvent(timeout)
     if ev:
-      if FLAGS.debug_events:
-        self._logger.debug('Publishing event: %s ' % ev)
-      for listener in self._IterEventListeners():
-        listener.PostEvent(ev)
+      self._Dispatch(ev)
+
+  def _Dispatch(self, ev):
+    if self._debug:
+      self._logger.debug('Publishing event: %s ' % ev)
+    cls = ev.__class__
+    for cb in self._subscriptions.get(cls, []):
+      cb(ev)
+
+  def Flush(self):
+    """Dispatches all events immediately, returning a count of total
+    dispatched."""
+    count = 0
+    while True:
+      try:
+        self._Dispatch(self._event_queue.get_nowait())
+        count += 1
+      except Queue.Empty:
+        break
+    return count
 

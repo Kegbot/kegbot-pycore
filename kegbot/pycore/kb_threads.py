@@ -1,54 +1,58 @@
+# Copyright 2003-2012 Mike Wakerly <opensource@hoho.com>.
+#
+# This file is part of the Pykeg package of the Kegbot project.
+# For more information on Pykeg or Kegbot, see http://kegbot.org/
+#
+# Pykeg is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# Pykeg is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Pykeg.  If not, see <http://www.gnu.org/licenses/>.
+
 from __future__ import absolute_import
 
 import asyncore
-import Queue
 import time
 
-import gflags
-
 from kegbot.util import util
-
 from . import kbevent
-
-FLAGS = gflags.FLAGS
-
-### Base kegbot thread class
 
 class CoreThread(util.KegbotThread):
   """ Convenience wrapper around a threading.Thread """
   def __init__(self, kb_env, name):
     util.KegbotThread.__init__(self, name)
     self._kb_env = kb_env
+    self._kb_env.GetEventHub().Subscribe(kbevent.QuitEvent, self._HandleQuit)
 
-  ### Event listener methods
-  def PostEvent(self, event):
-    if isinstance(event, kbevent.QuitEvent):
-      self._logger.info('got quit event, quitting')
-      self.Quit()
+  def _HandleQuit(self, event):
+    self._logger.info('got quit event, quitting')
+    self.Quit()
 
 
 class WatchdogThread(CoreThread):
   """Monitors all threads in _kb_env for crashes."""
-
   def ThreadMain(self):
-    fault_detected = False
     while not self._quit:
-      if not fault_detected:
-        for thr in self._kb_env.GetThreads():
-          if not thr.hasStarted():
-            continue
-          if not self._quit and not thr.isAlive():
-            self._logger.error('Thread %s died unexpectedly' % thr.getName())
-            event = kbevent.QuitEvent()
-            self._kb_env.GetEventHub().PublishEvent(event)
-            fault_detected = True
-            break
+      for thr in self._kb_env.GetThreads():
+        if not thr.hasStarted():
+          continue
+        if not self._quit and not thr.isAlive():
+          self._logger.error('Thread %s died unexpectedly' % thr.getName())
+          event = kbevent.QuitEvent()
+          self._kb_env.GetEventHub().PublishEvent(event)
+          break
       time.sleep(0.5)
 
 
 class EventHubServiceThread(CoreThread):
   """Handles all event dispatches for the event hub."""
-
   def ThreadMain(self):
     hub = self._kb_env.GetEventHub()
     while not self._quit:
@@ -57,7 +61,6 @@ class EventHubServiceThread(CoreThread):
 
 class HeartbeatThread(CoreThread):
   """Generates periodic events."""
-
   def ThreadMain(self):
     hub = self._kb_env.GetEventHub()
     seconds = 0
@@ -71,71 +74,6 @@ class HeartbeatThread(CoreThread):
         hub.PublishEvent(event)
 
 
-class EventHandlerThread(CoreThread):
-  """ Basic event handling thread. """
-  def __init__(self, kb_env, name):
-    CoreThread.__init__(self, kb_env, name)
-    self._event_queue = Queue.Queue()
-    self._event_handlers = set()
-    self._all_event_map = {}
-
-  def AddEventHandler(self, event_handler):
-    self._event_handlers.add(event_handler)
-    self._RefreshEventMap()
-
-  def _RefreshEventMap(self):
-    for svc in self._event_handlers:
-      for event_type, callback_list in svc.GetEventHandlers().iteritems():
-        if self._all_event_map.get(event_type) is None:
-          self._all_event_map[event_type] = set()
-        for cb in callback_list:
-          self._all_event_map[event_type].add(cb)
-
-  def ThreadMain(self):
-    while not self._quit:
-      self._Step(timeout=0.5)
-
-  def _Step(self, timeout=0.5):
-    event = self._WaitForEvent(timeout)
-    if event is not None:
-      self._ProcessEvent(event)
-    return event
-
-  def PostEvent(self, event):
-    self._event_queue.put(event)
-
-  def _GetCallbacksForEvent(self, event):
-    return self._all_event_map.get(event.__class__, tuple())
-
-  def _WaitForEvent(self, timeout=0.5):
-    """ Block until an event is posted, then process it """
-    try:
-      ev = self._event_queue.get(timeout=timeout)
-      return ev
-    except Queue.Empty:
-      return None
-
-  def _ProcessEvent(self, event):
-    """ Execute the event callback associated with the event, if present. """
-    if FLAGS.debug_events:
-      self._logger.debug('Processing event: %s' % event)
-    if isinstance(event, kbevent.QuitEvent):
-      self._logger.info('got quit event, quitting')
-      self.Quit()
-      return
-    callbacks = self._GetCallbacksForEvent(event)
-    for cb in callbacks:
-      cb(event)
-
-  def _FlushEvents(self):
-    """ Process all events in the Queue immediately """
-    while True:
-      ev = self._Step(timeout=0.5)
-      if ev is None:
-        break
-
-
-### Service threads
 class NetProtocolThread(CoreThread):
   def ThreadMain(self):
     self._logger.info('Starting network thread.')
