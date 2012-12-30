@@ -2,51 +2,52 @@
 
 """Unittest for manager module"""
 
+import datetime
 import unittest
 
 from . import common_defs
 from . import kbevent
 from . import manager
 
-class _MockKegbotCore(object):
-  pass
-
 class FlowManagerTestCase(unittest.TestCase):
   def setUp(self):
     event_hub = kbevent.EventHub()
-    self.tap_manager = manager.TapManager("tap-manager", event_hub)
-    self.flow_manager = manager.FlowManager("flow-manager", event_hub, self.tap_manager)
-    self.tap_manager.RegisterTap(name='flow0', ml_per_tick=1/2200.0,
-        max_tick_delta=1100)
+    backend = None
+    self.tap_manager = manager.TapManager(event_hub, backend)
+    self.flow_manager = manager.FlowManager(event_hub, self.tap_manager)
+    self.tap_manager._RegisterOrUpdateTap(name='flow0', ml_per_tick=1000/2200.0)
 
   def tearDown(self):
-    self.tap_manager.UnregisterTap(name='flow0')
+    del self.tap_manager._taps['flow0']
 
   def testBasicMeterUse(self):
     """Create a new flow device, perform basic operations on it."""
     # Duplicate registration should cause an exception.
-    self.assertRaises(manager.AlreadyRegisteredError,
-                      self.tap_manager.RegisterTap, 'flow0', 0, 0)
+    #self.assertRaises(manager.AlreadyRegisteredError,
+    #                  self.tap_manager.RegisterTap, 'flow0', 0, 0)
 
-    # ...as should operations on an unknown device.
-    self.assertRaises(manager.UnknownDeviceError,
+    self.assertRaises(manager.UnknownTapError,
                       self.tap_manager.GetTap, 'flow_unknown')
-    self.assertRaises(manager.UnknownDeviceError,
+    self.assertRaises(manager.UnknownTapError,
                       self.tap_manager.UpdateDeviceReading, 'flow_unknown', 123)
 
     # Our new device should have accumulated 0 volume thus far.
-    tap = self.tap_manager.GetTap(name='flow0')
-    meter = tap.GetMeter()
+    tap = self.tap_manager.GetTap('flow0')
+    meter = self.tap_manager.GetMeter('flow0')
     self.assertEqual(meter.GetTicks(), 0L)
 
     # Report an instantaneous reading of 2000 ticks. Since this is the first
     # reading, this should cause no change in the device volume.
-    self.tap_manager.UpdateDeviceReading(name='flow0', value=2000)
+    flow, is_new = self.flow_manager.UpdateFlow(tap.GetName(), 2000)
     self.assertEqual(meter.GetTicks(), 0L)
+    self.assertIsNotNone(flow)
+    self.assertTrue(is_new)
 
     # Report another instantaneous reading, which should now increment the flow
-    self.tap_manager.UpdateDeviceReading(name='flow0', value=2100)
+    new_flow, is_new = self.flow_manager.UpdateFlow(tap.GetName(), 2100)
     self.assertEqual(meter.GetTicks(), 100L)
+    self.assertFalse(is_new)
+    self.assertIs(flow, new_flow)
 
     # The FlowManager saves the last reading value; check it.
     self.assertEqual(meter.GetLastReading(), 2100)
@@ -54,74 +55,76 @@ class FlowManagerTestCase(unittest.TestCase):
     # Report a reading that is much larger than the last reading. Values larger
     # than the constant common_defs.MAX_METER_READING_DELTA should be ignored by
     # the FlowManager.
+    meter_reading = meter.GetLastReading()
     illegal_delta = common_defs.MAX_METER_READING_DELTA + 100
-    new_reading = meter.GetLastReading() + illegal_delta
-    self.tap_manager.UpdateDeviceReading(name='flow0', value=new_reading)
+    new_reading = meter_reading + illegal_delta
+
     # The illegal update should not affect the volume.
-    vol = self.flow_manager.GetDeviceVolume(name='flow0')
-    self.assertEqual(vol, 100L)
+    new_flow, is_new = self.flow_manager.UpdateFlow(tap.GetName(), new_reading)
+    self.assertFalse(is_new)
+    self.assertIs(flow, new_flow)
+    self.assertEqual(meter.GetTicks(), 100)
+
     # The value of the last update should be recorded, however.
-    last_reading = self.flow_manager.GetDeviceLastReading(name='flow0')
-    self.assertEqual(last_reading, new_reading)
+    self.assertEqual(meter.GetLastReading(), new_reading)
 
   def testOverflowHandling(self):
     first_reading = 2**32 - 100    # start with very large number
     second_reading = 2**32 - 50    # increment by 50
     overflow_reading = 10          # increment by 50+10 (overflow)
 
-    self.tap_manager.UpdateDeviceReading('flow0', first_reading)
-    curr_reading = self.flow_manager.GetDeviceVolume('flow0')
-    self.assertEqual(curr_reading, 0)
+    flow, is_new = self.flow_manager.UpdateFlow('flow0', first_reading)
+    self.assertIsNotNone(flow)
+    self.assertTrue(is_new)
+    self.assertEqual(0, flow.GetTicks())
 
-    self.tap_manager.UpdateDeviceReading('flow0', second_reading)
-    curr_reading = self.flow_manager.GetDeviceVolume('flow0')
-    self.assertEqual(curr_reading, 50)
+    new_flow, is_new = self.flow_manager.UpdateFlow('flow0', second_reading)
+    self.assertIs(flow, new_flow)
+    self.assertFalse(is_new)
+    self.assertEqual(50, flow.GetTicks())
 
-    self.tap_manager.UpdateDeviceReading('flow0', overflow_reading)
-    curr_reading = self.flow_manager.GetDeviceVolume('flow0')
-    self.assertEqual(curr_reading, 110)
+    new_flow, is_new = self.flow_manager.UpdateFlow('flow0', overflow_reading)
+    self.assertIs(flow, new_flow)
+    self.assertFalse(is_new)
+    self.assertEqual(50, flow.GetTicks())
 
   def testNoOverflow(self):
-    self.tap_manager.UpdateDeviceReading('flow0', 0)
-    curr_reading = self.flow_manager.GetDeviceVolume('flow0')
-    self.assertEqual(curr_reading, 0)
+    flow, is_new = self.flow_manager.UpdateFlow('flow0', 0)
+    self.assertIsNotNone(flow)
+    self.assertTrue(is_new)
+    self.assertEqual(0, flow.GetTicks())
 
-    self.tap_manager.UpdateDeviceReading('flow0', 100)
-    curr_reading = self.flow_manager.GetDeviceVolume('flow0')
-    self.assertEqual(curr_reading, 100)
+    new_flow, is_new = self.flow_manager.UpdateFlow('flow0', 100)
+    self.assertIs(flow, new_flow)
+    self.assertFalse(is_new)
+    self.assertEqual(100, flow.GetTicks())
 
-    self.tap_manager.UpdateDeviceReading('flow0', 10)
-    curr_reading = self.flow_manager.GetDeviceVolume('flow0')
-    self.assertEqual(curr_reading, 100)
+    new_flow, is_new = self.flow_manager.UpdateFlow('flow0', 10)
+    self.assertIs(flow, new_flow)
+    self.assertFalse(is_new)
+    self.assertEqual(100, flow.GetTicks())
 
-    self.tap_manager.UpdateDeviceReading('flow0', 20)
-    curr_reading = self.flow_manager.GetDeviceVolume('flow0')
-    self.assertEqual(curr_reading, 110)
+    new_flow, is_new = self.flow_manager.UpdateFlow('flow0', 20)
+    self.assertIs(flow, new_flow)
+    self.assertFalse(is_new)
+    self.assertEqual(110, flow.GetTicks())
 
   def testActivityMonitoring(self):
-    self.tap_manager.UpdateDeviceReading('flow0', 0, when=0)
+    def t(stamp):
+      return datetime.datetime.fromtimestamp(stamp)
 
-    # initial idle time should be infinite (should return `now`)
-    idle_time = self.flow_manager.GetDeviceIdleSeconds('flow0', now=1000)
-    self.assertEqual(idle_time, 1000)
+    flow, is_new = self.flow_manager.UpdateFlow('flow0', 0, when=t(0))
+    self.assertIsNotNone(flow)
+    self.assertTrue(is_new)
 
-    self.tap_manager.UpdateDeviceReading('flow0', 10, when=10)
-    self.tap_manager.UpdateDeviceReading('flow0', 30, when=15)
+    self.assertFalse(flow.IsIdle(when=t(0)))
+    self.assertTrue(flow.IsIdle(when=t(1000)))
 
-    idle_time = self.flow_manager.GetDeviceIdleSeconds('flow0', now=20)
-    self.assertEqual(idle_time, 5)
+    idle_flows = list(self.flow_manager.IterIdleFlows(when=t(0)))
+    self.assertTrue(len(idle_flows) == 0)
 
-    # Updating the device again with zero delta should not clear existing idle
-    # time.
-    self.tap_manager.UpdateDeviceReading('flow0', 30, when=30)
-    idle_time = self.flow_manager.GetDeviceIdleSeconds('flow0', now=40)
-    self.assertEqual(idle_time, 25)
-
-    # Updating the device with negative delta should also leave idle time
-    # unchanged.
-    self.tap_manager.UpdateDeviceReading('flow0', 10, when=50)
-    idle_time = self.flow_manager.GetDeviceIdleSeconds('flow0', now=60)
-    self.assertEqual(idle_time, 45)
+    idle_flows = list(self.flow_manager.IterIdleFlows(when=t(1000)))
+    self.assertTrue(len(idle_flows) == 1)
 
 
 if __name__ == '__main__':

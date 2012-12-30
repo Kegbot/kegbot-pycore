@@ -74,10 +74,8 @@ class MeterUpdate(Event):
 
 class FlowUpdate(Event):
   class FlowState:
-    INITIAL = "initial"
     ACTIVE = "active"
     IDLE = "idle"
-    CLOSE_WAIT = "close_wait"
     COMPLETED = "completed"
   flow_id = EventField()
   tap_name = EventField()

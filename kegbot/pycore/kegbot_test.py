@@ -7,8 +7,6 @@ import time
 import logging
 import unittest
 
-from django.test import TestCase
-
 from kegbot.pycore import common_defs
 from kegbot.util import units
 
@@ -23,7 +21,7 @@ from pykeg.beerdb import models as bdb_models
 
 LOGGER = logging.getLogger('unittest')
 
-class KegbotTestCase(TestCase):
+class KegbotTestCase(unittest.TestCase):
   def setUp(self):
     del logging.root.handlers[:]
     if not defaults.db_is_installed():
@@ -50,7 +48,7 @@ class KegbotTestCase(TestCase):
         name='Test Tap', meter_name='test_meter_name',
         ml_per_tick=(1000.0/2200.0), current_keg=self.test_keg)
 
-    self.kegbot = kegbot_app.KegbotCoreApp(local_backend=True)
+    self.kegbot = kegbot_app.KegbotCoreApp()
     self.env = self.kegbot._env
     self.backend = self.env.GetBackend()
 

@@ -30,8 +30,10 @@ import threading
 import logging
 
 from . import common_defs
-from . import flow_meter
 from . import kbevent
+from .flow import Flow
+from .flow_meter import FlowMeter
+from .tap import Tap
 
 from kegbot.api import kbapi
 from kegbot.util import util
@@ -40,9 +42,6 @@ FLAGS = gflags.FLAGS
 
 class TapManagerError(Exception):
   """ Generic TapManager error """
-
-class AlreadyRegisteredError(TapManagerError):
-  """ Raised when attempting to register an already-registered name """
 
 class UnknownTapError(TapManagerError):
   """ Raised when tap requested does not exist """
@@ -79,29 +78,6 @@ class Manager(object):
     self._event_hub.PublishEvent(event)
 
 
-class Tap:
-  def __init__(self, name, ml_per_tick, max_tick_delta, relay_name=None):
-    self._name = name
-    self._ml_per_tick = ml_per_tick
-    self._meter = flow_meter.FlowMeter(name, max_delta=max_tick_delta)
-    self._relay_name = relay_name
-
-  def __str__(self):
-    return self._name
-
-  def GetName(self):
-    return self._name
-
-  def GetMeter(self):
-    return self._meter
-
-  def GetRelayName(self):
-    return self._relay_name
-
-  def TicksToMilliliters(self, amt):
-    return self._ml_per_tick * float(amt)
-
-
 class TapManager(Manager):
   """Maintains listing of available fluid paths.
 
@@ -115,6 +91,7 @@ class TapManager(Manager):
     super(TapManager, self).__init__(event_hub)
     self._backend = backend
     self._taps = {}
+    self._meters = {}
 
   def TapExists(self, name):
     return name in self._taps
@@ -126,24 +103,43 @@ class TapManager(Manager):
     if not self.TapExists(name):
       raise UnknownTapError
 
-  def RegisterTap(self, name, ml_per_tick, max_tick_delta, relay_name=None):
-    self._logger.info('Registering new tap: %s' % name)
-    if self.TapExists(name):
-      raise AlreadyRegisteredError
-    self._taps[name] = Tap(name, ml_per_tick, max_tick_delta, relay_name)
+  def _RegisterOrUpdateTap(self, name, ml_per_tick, relay_name=None):
+    existing = self._taps.get(name)
+    new_tap = Tap(name, ml_per_tick, relay_name)
+    if existing == new_tap:
+      return
+    self._logger.info('Updating tap: %s' % new_tap)
+    self._taps[name] = new_tap
+    max_delta = (1 / ml_per_tick) * 500.0 # TODO(mikey): remove
+    self._meters[name] = FlowMeter(name, max_delta)
 
-  def UnregisterTap(self, name):
-    self._logger.info('Unregistering tap: %s' % name)
-    self._CheckTapExists(name)
+  def _RemoveTap(self, name):
     del self._taps[name]
+    del self._meters[name]
 
   def GetTap(self, name):
+    """Returns the registered tap identified by `name`."""
     self._CheckTapExists(name)
     return self._taps[name]
 
-  def UpdateDeviceReading(self, name, value, when=None):
-    meter = self.GetTap(name).GetMeter()
-    delta = meter.SetTicks(value, when=when)
+  def GetMeter(self, name):
+    """Returns the meter for the registered tap identified by `name`."""
+    self._CheckTapExists(name)
+    return self._meters[name]
+
+  def UpdateDeviceReading(self, tap_name, value, when=None):
+    """Updates the meter reading at the tap named `tap_name`.
+
+    Args
+      tap_name: the tap name
+      value: the instantaneous meter reading
+      when: the timestamp of the meter reading, or None for now
+
+    Returns
+      the amount the meter was incremented (as in FlowMeter.SetTicks)
+    """
+    meter = self.GetMeter(tap_name)
+    delta = meter.SetTicks(value)
     return delta
 
   @EventHandler(kbevent.StartedEvent)
@@ -163,117 +159,14 @@ class TapManager(Manager):
       self._logger.error('Could not sync taps. Is --api_url correct? (current=%s)' % FLAGS.api_url)
       return
 
-    update = False
     for tap in taps:
       if self.TapExists(tap.meter_name):
         continue
-      update = True
-      self.RegisterTap(tap.meter_name, tap.ml_per_tick,
-          (1/tap.ml_per_tick*500), relay_name=tap.relay_name)
-
-    if update:
-      self._logger.info('Updated taps: %s' % self._taps)
-
-class Flow:
-  def __init__(self, tap, flow_id, username=None, max_idle_secs=10):
-    self._tap = tap
-    self._flow_id = flow_id
-    self._bound_username = username
-    self._max_idle = datetime.timedelta(seconds=max_idle_secs)
-    self._state = kbevent.FlowUpdate.FlowState.INITIAL
-    self._start_time = datetime.datetime.now()
-    self._end_time = None
-    self._last_log_time = None
-    self._total_ticks = 0L
-
-  def __str__(self):
-    return '<Flow 0x%08x: tap=%s ticks=%s username=%s max_idle=%s>' % (self._flow_id,
-        self._tap, self._total_ticks, repr(self._bound_username),
-        self._max_idle)
-
-  def GetUpdateEvent(self):
-    event = kbevent.FlowUpdate()
-    event.flow_id = self._flow_id
-    event.tap_name = self._tap.GetName()
-    event.state = self._state
-
-    # TODO(mikey): username or user_name in the proto, not both
-    if self._bound_username:
-      event.username = self._bound_username
-
-    event.start_time = self._start_time
-    end = self._start_time
-    if self._end_time:
-      end = self._end_time
-    event.last_activity_time = end
-    event.ticks = self.GetTicks()
-    event.volume_ml = self.GetVolumeMl()
-
-    return event
-
-  def AddTicks(self, amount, when=None):
-    self._total_ticks += amount
-    if when is None:
-      when = datetime.datetime.now()
-    self._end_time = when
-
-  def GetId(self):
-    return self._flow_id
-
-  def GetState(self):
-    return self._state
-
-  def SetState(self, state):
-    self._state = state
-
-  def SetMaxIdle(self, max_idle_secs):
-    self._max_idle = datetime.timedelta(seconds=max_idle_secs)
-
-  def GetTicks(self):
-    return self._total_ticks
-
-  def GetVolumeMl(self):
-    return self._tap.TicksToMilliliters(self._total_ticks)
-
-  def GetUsername(self):
-    return self._bound_username
-
-  def SetUsername(self, username):
-    self._bound_username = username
-
-  def GetStartTime(self):
-    return self._start_time
-
-  def GetEndTime(self):
-    return self._end_time
-
-  def GetIdleTime(self):
-    end_time = self._end_time
-    if end_time is None:
-      end_time = self._start_time
-    return datetime.datetime.now() - end_time
-
-  def GetMaxIdleTime(self):
-    return self._max_idle
-
-  def GetTap(self):
-    return self._tap
-
-  def IsIdle(self):
-    return self.GetIdleTime() > self.GetMaxIdleTime()
-
+      self._RegisterOrUpdateTap(tap.meter_name, tap.ml_per_tick,
+          relay_name=tap.relay_name)
 
 class FlowManager(Manager):
-  """Class reponsible for maintaining and servicing flows.
-
-  The manager is responsible for creating Flow instances and managing their
-  lifecycle.  It is one layer above the the TapManager, in that it does not
-  deal with devices directly.
-
-  Flows can be started in multiple ways:
-    - Explicitly, by a call to StartFlow
-    - Implicitly, by a call to HandleTapActivity
-  """
+  """Class reponsible for maintaining and servicing flows."""
   def __init__(self, event_hub, tap_manager):
     super(FlowManager, self).__init__(event_hub)
     self._tap_manager = tap_manager
@@ -295,52 +188,68 @@ class FlowManager(Manager):
   def GetActiveFlows(self):
     return self._flow_map.values()
 
+  def IterIdleFlows(self, when=None):
+    for flow in self._flow_map.values():
+      if flow.IsIdle(when):
+        yield flow
+
   def GetFlow(self, tap_name):
     return self._flow_map.get(tap_name)
 
   def StartFlow(self, tap_name, username='', max_idle_secs=10):
-    try:
-      tap = self._tap_manager.GetTap(tap_name)
-    except UnknownTapError:
-      return None
+    """Starts a new flow on the given tap, or takes over the existing flow.
+
+    Args
+      tap_name: name of the tap
+      username: username to own the flow, or None/empty string for anonymous
+      max_idle_secs: maximum number of seconds until the flow is marked idle
+
+    Returns
+      Tuple of (Flow, boolean is_new).
+
+    Raises
+      UnknownTapError: if the named tap does not exist
+    """
+    tap = self._tap_manager.GetTap(tap_name)
 
     current = self.GetFlow(tap_name)
-    if current and username and current.GetUsername() != username:
-      # There's an existing flow: take it over if anonymous; end it if owned by
-      # another user.
-      if current.GetUsername() == '':
+    if current and username:
+      if current.GetUsername() == username:
+        # Already have a flow for this user; no change.
+        return current, False
+      elif current.GetUsername() == '':
+        # Take over existing anonymous flow.
         self._logger.info('User "%s" is taking over the existing flow' %
             username)
-        self.SetUsername(current, username)
+        current.SetUsername(username)
+        self._PublishUpdate(current)
+        return current, False
       else:
         self._logger.info('User "%s" is replacing the existing flow' %
             username)
-        self.StopFlow(tap_name, disable_relay=False)
-        current = None
+        self.StopFlow(tap_name)
 
-    if current and current.GetUsername() == username:
-      # Existing flow owned by this username.  Just poke it.
-      current.SetMaxIdle(max_idle_secs)
-      self._PublishUpdate(current)
-      return current
-    else:
-      # No existing flow; start a new one.
-      new_flow = Flow(tap, flow_id=self._GetNextFlowId(), username=username,
-          max_idle_secs=max_idle_secs)
-      self._flow_map[tap_name] = new_flow
-      self._logger.info('Starting flow: %s' % new_flow)
-      self._PublishUpdate(new_flow)
+    # Start a new flow.
+    new_flow = Flow(tap, flow_id=self._GetNextFlowId(), username=username,
+        max_idle_secs=max_idle_secs)
+    self._flow_map[tap_name] = new_flow
+    self._logger.info('Starting flow: %s' % new_flow)
+    self._PublishUpdate(new_flow)
 
-      # Open up the relay if the flow is authenticated.
-      if username:
-        self._PublishRelayEvent(new_flow, enable=True)
-      return new_flow
+    # Open up the relay if the flow is authenticated.
+    if username:
+      self._PublishRelayEvent(new_flow, enable=True)
+    return new_flow, True
 
-  def SetUsername(self, flow, username):
-    flow.SetUsername(username)
-    self._PublishUpdate(flow)
+  def StopFlow(self, tap_name):
+    """Ends the flow at the given tap name.
 
-  def StopFlow(self, tap_name, disable_relay=True):
+    Returns
+      the previously active flow, or None if no flow was active.
+
+    Raises
+      UnknownTapError: if the named tap doesn't exist
+    """
     try:
       flow = self.GetFlow(tap_name)
     except UnknownTapError:
@@ -354,7 +263,18 @@ class FlowManager(Manager):
     self._StateChange(flow, kbevent.FlowUpdate.FlowState.COMPLETED)
     return flow
 
-  def UpdateFlow(self, tap_name, meter_reading):
+  def UpdateFlow(self, tap_name, meter_reading, when=None):
+    """Creates or updates a flow at `tap_name`.
+
+    Args
+      tap_name: name of the tap to update
+      meter_reading: instantaneous meter reading
+      when: timestamp used for activity (defaults to datetime.now)
+
+    Returns
+      Tuple of (flow, is_new).
+      Flow may be None if no update occurred.
+    """
     try:
       tap = self._tap_manager.GetTap(tap_name)
     except TapManagerError:
@@ -366,22 +286,16 @@ class FlowManager(Manager):
     self._logger.debug('Flow update: tap=%s meter_reading=%i (delta=%i)' %
         (tap_name, meter_reading, delta))
 
-    if delta == 0:
-      return None, None
-
     is_new = False
     flow = self.GetFlow(tap_name)
     if flow is None:
       self._logger.debug('Starting flow implicitly due to activity.')
-      flow = self.StartFlow(tap_name)
-      is_new = True
-    flow.AddTicks(delta, datetime.datetime.now())
+      flow, is_new = self.StartFlow(tap_name)
+    if when is None:
+      when = datetime.datetime.now()
 
-    if flow.GetState() != kbevent.FlowUpdate.FlowState.ACTIVE:
-      self._StateChange(flow, kbevent.FlowUpdate.FlowState.ACTIVE)
-    else:
-      self._PublishUpdate(flow)
-
+    flow.AddTicks(delta, when)
+    self._PublishUpdate(flow)
     return flow, is_new
 
   def _StateChange(self, flow, new_state):
@@ -394,16 +308,6 @@ class FlowManager(Manager):
 
   @EventHandler(kbevent.MeterUpdate)
   def HandleFlowActivityEvent(self, event):
-    """Handles the FLOW_DEV_ACTIVITY event.
-
-    The handler accquires the FlowManager, and calls FlowUpdate.  This may
-    result in one of three outcomes:
-      - New flow created. A FLOW_START event is emitted, followed by a
-        FLOW_UPDATE event.
-      - Existing flow updated. A FLOW_UPDATE event is emitted.
-      - Update refused.  The channel is unknown by the FlowManager.  No events
-        are emitted.
-    """
     try:
       flow_instance, is_new = self.UpdateFlow(event.tap_name, event.reading)
     except UnknownTapError:
@@ -592,7 +496,6 @@ class TokenRecord:
     self.auth_device = auth_device
     self.token_value = token_value
     self.tap_name = tap_name
-    self.last_seen = datetime.datetime.now()
     self.status = self.STATUS_ACTIVE
 
   def __str__(self):
@@ -603,13 +506,6 @@ class TokenRecord:
 
   def SetStatus(self, status):
     self.status = status
-
-  def UpdateLastSeen(self):
-    self.SetStatus(self.STATUS_ACTIVE)
-    self.last_seen = datetime.datetime.now()
-
-  def IdleTime(self):
-    return datetime.datetime.now() - self.last_seen
 
   def IsPresent(self):
     return self.status == self.STATUS_ACTIVE
@@ -700,7 +596,7 @@ class AuthenticationManager(Manager):
 
     if existing == record:
       # Token is already known; nothing to do except update it.
-      record.UpdateLastSeen()
+      record.SetStatus(TokenRecord.STATUS_ACTIVE)
       return
 
     if existing:

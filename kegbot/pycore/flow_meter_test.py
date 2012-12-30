@@ -30,9 +30,6 @@ class FlowMeterTestCase(unittest.TestCase):
   def setUp(self):
     self.meter = flow_meter.FlowMeter('test_meter', max_delta=MAX_DELTA)
 
-  def tearDown(self):
-    del self.meter
-
   def _testSequence(self, meter, sequence, expected_total):
     for reading in sequence:
       meter.SetTicks(reading)
@@ -91,7 +88,7 @@ class FlowMeterTestCase(unittest.TestCase):
 
     self.meter.SetTicks(overflow_reading)
     curr_reading = self.meter.GetTicks()
-    self.assertEqual(curr_reading, 60)
+    self.assertEqual(curr_reading, 50)
 
   def testNoOverflow(self):
     self.meter.SetTicks(0)
@@ -104,40 +101,11 @@ class FlowMeterTestCase(unittest.TestCase):
 
     self.meter.SetTicks(10)
     curr_reading = self.meter.GetTicks()
-    self.assertEqual(curr_reading, 110)
+    self.assertEqual(curr_reading, 100)
 
     self.meter.SetTicks(20)
     curr_reading = self.meter.GetTicks()
-    self.assertEqual(curr_reading, 120)
-
-  def testActivityMonitoring(self):
-    d = lambda x: datetime.datetime.fromtimestamp(x)
-    self.meter.SetTicks(0, when=d(0))
-
-    # initial idle time should be infinite (should return `now`)
-    idle_time = self.meter.GetIdleTime(now=d(1000))
-    self.assertEqual(idle_time, datetime.timedelta(seconds=1000))
-
-    self.meter.SetTicks(10, when=d(1000))
-    self.meter.SetTicks(30, when=d(1015))
-
-    idle_time = self.meter.GetIdleTime(now=d(1020))
-    self.assertEqual(idle_time, datetime.timedelta(seconds=5))
-
-    # Updating the device again with zero delta should not clear existing idle
-    # time.
-    self.meter.SetTicks(30, when=d(1030))
-    idle_time = self.meter.GetIdleTime(now=d(1040))
-    self.assertEqual(idle_time, datetime.timedelta(seconds=25))
-
-    # Updating the device with invalid and negative delta should also leave idle
-    # time unchanged.
-    self.meter.SetTicks(9000, when=d(1050))
-    idle_time = self.meter.GetIdleTime(now=d(1060))
-    self.assertEqual(idle_time, datetime.timedelta(seconds=45))
-    self.meter.SetTicks(8000, when=d(1070))
-    idle_time = self.meter.GetIdleTime(now=d(1080))
-    self.assertEqual(idle_time, datetime.timedelta(seconds=65))
+    self.assertEqual(curr_reading, 110)
 
 
 if __name__ == '__main__':
