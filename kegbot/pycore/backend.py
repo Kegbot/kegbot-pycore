@@ -24,7 +24,24 @@ import socket
 from kegbot.api import kbapi
 from . import common_defs
 
-class WebBackend:
+class Backend(object):
+  def GetAllTaps(self):
+    raise NotImplementedError
+
+  def RecordDrink(self, tap_name, ticks, volume_ml=None, username=None,
+      pour_time=None, duration=0, auth_token=None, spilled=False, shout=''):
+    raise NotImplementedError
+
+  def CancelDrink(self, drink_id, spilled=False):
+    raise NotImplementedError
+
+  def LogSensorReading(self, sensor_name, temperature, when=None):
+    raise NotImplementedError
+
+  def GetAuthToken(self, auth_device, token_value):
+    raise NotImplementedError
+
+class WebBackend(Backend):
   def __init__(self, api_url=None, api_key=None):
     self._logger = logging.getLogger('api-backend')
     self._client = kbapi.Client(api_url=api_url, api_key=api_key)

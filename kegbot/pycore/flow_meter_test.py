@@ -19,7 +19,6 @@
 
 """Unittest for flow_meter module"""
 
-import datetime
 import unittest
 
 from . import flow_meter

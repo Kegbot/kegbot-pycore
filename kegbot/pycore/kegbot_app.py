@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2003-2009 Mike Wakerly <opensource@hoho.com>
+# Copyright 2003-2012 Mike Wakerly <opensource@hoho.com>.
 #
 # This file is part of the Pykeg package of the Kegbot project.
 # For more information on Pykeg or Kegbot, see http://kegbot.org/
@@ -48,14 +48,16 @@ class KegbotEnv(object):
   An instance of this class owns all the threads and services used in the kegbot
   core. It is commonly passed around to objects that the core creates.
   """
-  def __init__(self):
+  def __init__(self, backend_obj=None):
     self._event_hub = kbevent.EventHub()
     self._logger = logging.getLogger('env')
 
     self._kegnet_server = kegnet.KegnetServer(name='kegnet', kb_env=self,
         addr=FLAGS.kb_core_bind_addr)
 
-    self._backend = backend.WebBackend()
+    if not backend_obj:
+      backend_obj = backend.WebBackend()
+    self._backend = backend_obj
 
     # Build managers
     self._tap_manager = manager.TapManager(self._event_hub, self._backend)
