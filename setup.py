@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 """Standalone Python Kegbot Core.
+
+For more information, see http://kegbot.org/docs/pycore/
 """
 
 DOCLINES = __doc__.split('\n')
 
-VERSION = '1.0.2'
+VERSION = '1.0.3-pre'
 SHORT_DESCRIPTION = DOCLINES[0]
 LONG_DESCRIPTION = '\n'.join(DOCLINES[2:])
 
@@ -20,7 +22,7 @@ def setup_package():
       long_description = LONG_DESCRIPTION,
       author = 'mike wakerly',
       author_email = 'opensource@hoho.com',
-      url = 'http://kegbot.org/',
+      url = 'http://kegbot.org/docs/pycore',
       packages = find_packages(exclude=['testdata']),
       namespace_packages = ['kegbot'],
       scripts = [
