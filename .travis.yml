@@ -6,4 +6,5 @@ python:
 install:
   - pip install . --use-mirrors
 
-script: nosetests
+script:
+  - nosetests  --traverse-namespace --first-package-wins -e "^kegboard|^util"
