@@ -459,7 +459,7 @@ class ThermoManager(Manager):
     # Note: the backend may also be performing this check.
     last_record = self._name_to_last_record.get(sensor_name)
     if last_record:
-      last_time = last_record.time
+      last_value, last_time = last_record
       if last_time == now:
         self._logger.debug('Dropping excessive temp event')
         return
@@ -482,8 +482,8 @@ class ThermoManager(Manager):
     self._sensor_log[sensor_name] = now
 
     try:
-      new_record = self._backend.LogSensorReading(sensor_name, sensor_value, now)
-      self._name_to_last_record[sensor_name] = new_record
+      self._backend.LogSensorReading(sensor_name, sensor_value, now)
+      self._name_to_last_record[sensor_name] = (sensor_value, now)
     except ValueError:
       # Value was rejected by the backend; ignore.
       pass
