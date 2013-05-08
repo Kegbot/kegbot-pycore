@@ -14,22 +14,22 @@ FLAGS = gflags.FLAGS
 
 LOGGER = logging.getLogger('myunittest')
 
+TEST_ADDR = ':0'  # localhost, random port
+
 class KegnetTestCase(unittest.TestCase):
   def setUp(self):
     self.server = kegnet.KegnetServer(name='kegnet', kb_env=None,
-        addr=FLAGS.kb_core_bind_addr)
-
-  def tearDown(self):
-    pass
+        addr=TEST_ADDR)
+    self.server.StartServer()
+    self.port = self.server.getsockname()[1]
+    print 'Server started on port %s' % self.port
 
   def testSimpleFlow(self):
-    print 'Starting server'
-    self.server.StartServer()
-    print 'Done start'
     print 'Looping'
     asyncore.loop(timeout=1, count=1)
-    print 'New client'
-    client = kegnet.KegnetClient()
+    addr = ':%s' % (self.port,)
+    print 'New client, connecting to addr=%s' % addr
+    client = kegnet.KegnetClient(addr=addr)
     client.SendFlowStart('mytap')
     asyncore.loop(timeout=1, count=1)
     print 'Done'
