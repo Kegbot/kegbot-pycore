@@ -46,6 +46,7 @@ class WatchdogThread(CoreThread):
           continue
         if not self._quit and not thr.isAlive():
           self._logger.error('Thread %s died unexpectedly' % thr.getName())
+          i += 1
           event = kbevent.QuitEvent()
           self._kb_env.GetEventHub().PublishEvent(event)
           break
