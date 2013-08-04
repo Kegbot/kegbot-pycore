@@ -51,8 +51,8 @@ class WatchdogThread(CoreThread):
           self._kb_env.GetEventHub().PublishEvent(event)
           break
       time.sleep(0.5)
-         if i >= 5:
-           exit()
+        if i >= 5:
+          exit()
 
 class EventHubServiceThread(CoreThread):
   """Handles all event dispatches for the event hub."""
