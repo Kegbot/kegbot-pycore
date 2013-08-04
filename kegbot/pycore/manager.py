@@ -459,6 +459,14 @@ class ThermoManager(Manager):
     # Note: the backend may also be performing this check.
     last_record = self._name_to_last_record.get(sensor_name)
     if last_record:
+    #Added this to address errors related to the following if statement when last_time somehow isn't defined.  
+      try:
+        last_time
+      except NameError:
+        #Uncomment this for log output
+        #print "Setting last_time"
+        last_time = 1
+ 
       last_value, last_time = last_record
       if last_time == now:
         self._logger.debug('Dropping excessive temp event')
