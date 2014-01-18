@@ -31,11 +31,11 @@ def setup_package():
       ],
       install_requires = [
         'distribute',
-        'kegbot-pyutils >= 0.1.4',
-        'kegbot-api >= 0.1.2',
-        'kegbot-kegboard >= 1.0.0',
+        'kegbot-pyutils == 0.1.7',
+        'kegbot-api == 0.1.8',
+        'kegbot-kegboard == 1.0.0',
 
-        'python-gflags >= 1.8',
+        'python-gflags == 2.0',
       ],
       include_package_data = True,
   )
