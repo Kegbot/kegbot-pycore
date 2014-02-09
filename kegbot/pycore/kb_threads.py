@@ -19,10 +19,12 @@
 from __future__ import absolute_import
 
 import asyncore
+import redis
 import time
 
 from kegbot.util import util
 from . import kbevent
+from . import kegnet
 
 class CoreThread(util.KegbotThread):
   """ Convenience wrapper around a threading.Thread """
@@ -75,11 +77,20 @@ class HeartbeatThread(CoreThread):
 
 
 class NetProtocolThread(CoreThread):
+  """Reads messages in 'pycore' channel of redis."""
   def ThreadMain(self):
     self._logger.info('Starting network thread.')
-    server = self._kb_env.GetKegnetServer()
-    server.StartServer()
-    while not self._quit:
-      asyncore.loop(timeout=0.5, count=1)
-    server.StopServer()
+    hub = self._kb_env.GetEventHub()
+
+    class Client(kegnet.KegnetClient):
+      def __init__(self, hub):
+        super(Client, self).__init__()
+        self.hub = hub
+
+      def onNewEvent(self, event):
+        self._logger.debug('Publishing event: %s' % event)
+        self.hub.PublishEvent(event)
+
+    c = Client(hub)
+    c.Listen()
     self._logger.info('Network thread stopped.')

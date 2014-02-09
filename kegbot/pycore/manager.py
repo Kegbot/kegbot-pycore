@@ -31,6 +31,7 @@ import logging
 
 from . import common_defs
 from . import kbevent
+from . import kegnet
 from .flow import Flow
 from .flow_meter import FlowMeter
 from .tap import Tap
@@ -628,12 +629,15 @@ class AuthenticationManager(Manager):
 
 
 class SubscriptionManager(Manager):
-  def __init__(self, event_hub, server):
+  def __init__(self, event_hub):
     super(SubscriptionManager, self).__init__(event_hub)
-    self._server = server
+    self._client = kegnet.KegnetClient()
 
   @EventHandler(kbevent.DrinkCreatedEvent)
   @EventHandler(kbevent.FlowUpdate)
   @EventHandler(kbevent.SetRelayOutputEvent)
   def RepostEvent(self, event):
-    self._server.SendEventToClients(event)
+    if isinstance(event, kbevent.FlowUpdate):
+      if event.state == event.FlowState.COMPLETED:
+        return
+    self._client.SendMessage(event)

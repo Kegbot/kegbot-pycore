@@ -31,7 +31,6 @@ from kegbot.util import app
 from kegbot.util import units
 from kegbot.util import util
 
-
 try:
   from django.conf import settings
   TIME_ZONE = settings.TIME_ZONE
@@ -151,24 +150,23 @@ class KegUi:
     self._multiframe.AddFrame(self._splash_frame, 5.0)
     self._multiframe.AddFrame(self._last_drink_frame, FLAGS.rotation_time)
 
-    for tap_status in tap_status.taps:
-      tap = tap_status.tap
-      keg = tap_status.keg
-      beer_type = tap_status.beer_type
-      brewer = tap_status.brewer
+    for tap in tap_status:
       tap_name = tap.name
-      beer_name = 'Unknown Beer'
-      brewer_name = 'Unknown Brewer'
-      pct_full = 0
+      keg = tap.current_keg
+
+      if keg and keg.type:
+        beer_name = keg.type.name
+      else:
+        beer_name = 'Unknown Beer'
+      brewer_name = ''
+
       if keg:
         pct_full = keg.percent_full
-        if beer_type:
-          beer_name = beer_type.name
-        if brewer:
-          brewer_name = brewer.name
+      else:
+        pct_full = 0
 
       curr_temp = None
-      if tap.last_temperature:
+      if tap.get('last_temperature'):
         curr_temp = tap.last_temperature.temperature_c
 
       f = self._BuildTapFrame(tap_name, beer_name, brewer_name, pct_full, curr_temp)
@@ -277,13 +275,13 @@ class KrestUpdaterThread(util.KegbotThread):
         tap_status = self._client.TapStatus()
         self._lcdui.UpdateFromTapStatus(tap_status)
         last_drink = None
-        last_drinks = self._client.LastDrinks().drinks
+        last_drinks = self._client.AllDrinks()
         if last_drinks:
           last_drink = last_drinks[0]
         username = 'unknown'
-        if last_drink.user_id:
+        if last_drink.get('user_id'):
           username = str(last_drink.user_id)
-        date = util.iso8601str_to_datetime(last_drink.pour_time, TIME_ZONE)
+        date = last_drink.time
         self._lcdui.UpdateLastDrink(username, last_drink.volume_ml, date)
       except IOError, e:
         self._logger.warning('Could not connect to kegweb: %s' % e)
@@ -291,9 +289,9 @@ class KrestUpdaterThread(util.KegbotThread):
     self._logger.info('Exited main loop.')
 
 
-class LcdKegnetClient(kegnet.SimpleKegnetClient):
-  def __init__(self, kb_lcdui, addr=FLAGS.kb_core_addr):
-    kegnet.KegnetClient.__init__(self, addr)
+class LcdKegnetClient(kegnet.KegnetClient):
+  def __init__(self, kb_lcdui):
+    kegnet.KegnetClient.__init__(self)
     self._kb_lcdui = kb_lcdui
 
   def onFlowUpdate(self, event):
@@ -309,7 +307,7 @@ class KegnetMonitorThread(util.KegbotThread):
   def ThreadMain(self):
     self._logger.info('Starting main loop.')
     while not self._quit:
-      self._client.serve_forever()
+      self._client.Listen()
     self._client.stop()
 
 

@@ -32,8 +32,8 @@ Serial Protocol. See http://kegbot.org/docs for the complete specification.
 The daemon should run on any machine which is attached to kegboard hardware.
 
 The daemon must connect to a Kegbot Core in order to publish data (such as flow
-and temperature events).  This is a TCP connection, using the Kegnet Protocol to
-exchange data.
+and temperature events).  This is accomplished through Redis, which must be
+running locally.
 """
 
 import Queue
@@ -47,30 +47,23 @@ from kegbot.util import app
 from kegbot.util import util
 
 from kegbot.pycore import common_defs
+from kegbot.pycore import kbevent
 from kegbot.pycore import kegnet
 from kegbot.kegboard import kegboard
 
 FLAGS = gflags.FLAGS
 
-gflags.DEFINE_string('kegboard_name', 'kegboard',
-    'Name of this kegboard that will be used when talking to the core. '
-    'If you are using multiple kegboards, you will want to run different '
-    'daemons with different names. Otherwise, the default is fine.')
+gflags.DEFINE_string('kegboard_device_path', None,
+    'Name of the single kegboard device to use.  If unset, the program '
+    'will attempt to use all usb serial devices.')
 
-gflags.DEFINE_boolean('show_messages', True,
-    'Print all messages going to and from the kegboard. Useful for '
-    'debugging.')
+STATUS_CONNECTING = 'connecting'
+STATUS_CONNECTED = 'connected'
+STATUS_NEED_UPDATE = 'need-update'
 
-gflags.DEFINE_integer('required_firmware_version', 7,
-    'Minimum firmware version required.  If the device has an older '
-    'firmware version, the daemon will refuse to service it.  This '
-    'value should probably not be changed.')
-
-FLAGS.SetDefault('tap_name', common_defs.ALIAS_ALL_TAPS)
-
-class KegboardKegnetClient(kegnet.SimpleKegnetClient):
+class KegboardKegnetClient(kegnet.KegnetClient):
   def __init__(self, reader, addr=None):
-    kegnet.SimpleKegnetClient.__init__(self, addr)
+    kegnet.KegnetClient.__init__(self, addr)
     self._reader = reader
 
   def onSetRelayOutput(self, event):
@@ -93,154 +86,142 @@ class KegboardKegnetClient(kegnet.SimpleKegnetClient):
     message.SetValue('output_mode', output_mode)
     self._reader.WriteMessage(message)
 
+
 class KegboardManagerApp(app.App):
   def __init__(self, name='core'):
     app.App.__init__(self, name)
+    self.devices_by_path = {}
+    self.status_by_path = {}
+    self.name_by_path = {}
+    self.client = kegnet.KegnetClient()
 
   def _Setup(self):
     app.App._Setup(self)
 
-    serial_fd = serial.Serial(FLAGS.kegboard_device, FLAGS.kegboard_speed)
-    reader = kegboard.KegboardReader(serial_fd)
+  def _MainLoop(self):
+    self._logger.info('Main loop starting.')
+    while not self._do_quit:
+      self.update_devices()
+      if not self.service_devices():
+        time.sleep(0.1)
 
-    self._client = KegboardKegnetClient(reader=reader)
+  def update_devices(self):
+    if FLAGS.kegboard_device_path:
+      devices = kegboard.find_devices([FLAGS.kegboard_device_path])
+    else:
+      devices = kegboard.find_devices()
 
-    self._manager_thr = KegboardManagerThread('kegboard-manager',
-        self._client)
-    self._AddAppThread(self._manager_thr)
+    new_devices = [d for d in devices if d not in self.status_by_path.keys()]
+    for d in new_devices:
+      self._logger.info('Device added: %s' % d)
+      self.add_device(d)
 
-    self._device_io_thr = KegboardDeviceIoThread('device-io', self._manager_thr,
-        reader)
-    self._AddAppThread(self._device_io_thr)
+    removed_devices = [d for d in self.status_by_path.keys() if d not in devices]
+    for d in removed_devices:
+      self._logger.info('Device removed: %s' % d)
+      self.remove_device(d)
 
-    self._client_thr = kegnet.KegnetClientThread('kegnet', self._client)
-    self._AddAppThread(self._client_thr)
+  def add_device(self, path):
+    kb = kegboard.Kegboard(path)
+    self.devices_by_path[path] = kb
+    self.status_by_path[path] = STATUS_CONNECTING
+    self.name_by_path[path] = ''
+    kb.open()
+    try:
+      kb.ping()
+    except IOError:
+      self._logger.warning('Error pinging device')
+      remove_device(path)
 
+  def remove_device(self, path):
+    device = self.devices_by_path.pop(path)
+    device.close_quietly()
+    del self.status_by_path[path]
+    del self.name_by_path[path]
 
-class KegboardManagerThread(util.KegbotThread):
-  """Manager of local kegboard devices."""
+  def get_status(self, path):
+    return self.status_by_path.get(path, None)
 
-  def __init__(self, name, client):
-    util.KegbotThread.__init__(self, name)
-    self._client = client
-    self._message_queue = Queue.Queue()
+  def get_name(self, path):
+    return self.name_by_path.get(path, 'unknown')
 
-  def _DeviceName(self, base_name):
-    return '%s.%s' % (FLAGS.kegboard_name, base_name)
+  def active_devices(self):
+    for k, v in self.devices_by_path.iteritems():
+      if self.get_status(k) in (STATUS_CONNECTING, STATUS_CONNECTED):
+        yield v
 
-  def PostDeviceMessage(self, device_name, device_message):
-    """Receive a message from a device, for processing."""
-    self._message_queue.put((device_name, device_message))
+  def service_devices(self):
+    message_posted = False
+    for kb in self.active_devices():
+      for message in kb.drain_messages():
+        self.handle_message(kb, message)
+        message_posted = True
+    return message_posted
 
-  def run(self):
-    self._logger.info('Starting main loop.')
-    initialized = False
+  def post_message(self, kb, message):
+    self._logger.info('Posting message from %s: %s' % (kb, message))
 
-    while not self._quit:
-      try:
-        device_name, device_message = self._message_queue.get(timeout=1.0)
-      except Queue.Empty:
-        continue
+  def handle_message(self, kb, message):
+    path = kb.device_path
+    name = self.get_name(path) or 'unknown device'
+    self._logger.info('%s: %s' % (name, message))
 
-      if FLAGS.show_messages:
-        self._logger.info('RX: %s' % str(device_message))
-      self._HandleDeviceMessage(device_name, device_message)
+    if isinstance(message, kegboard.HelloMessage):
+      if self.get_status(path) == STATUS_CONNECTING:
+        if message.serial_number:
+          name = 'kegboard-%s' % (message.serial_number[-4:],)
+        else:
+          name = 'kegboard'
+        self._logger.info('Devices %s is named: %s' % (kb, name))
+        if name in self.name_by_path.values():
+          self._logger.warning('Device with this name already exists! Disabling it.')
+          self.status_by_path[path] = STATUS_NEED_UPDATE
+        else:
+          self.status_by_path[path] = STATUS_CONNECTED
+          self.name_by_path[path] = name
 
-    self._logger.info('Exiting main loop.')
+    if self.status_by_path[path] != STATUS_CONNECTED:
+      self._logger.debug('Ignoring message, device disconnected')
+      return
 
-  def _HandleDeviceMessage(self, device_name, msg):
-    if isinstance(msg, kegboard.MeterStatusMessage):
-      meter_name = self._DeviceName(msg.meter_name)
-      curr_val = msg.meter_reading
-      self._client.SendMeterUpdate(meter_name, curr_val)
+    self.message_to_event(kb, message)
 
-    elif isinstance(msg, kegboard.TemperatureReadingMessage):
-      sensor_name = self._DeviceName(msg.sensor_name)
-      sensor_value = msg.sensor_reading
-      self._client.SendThermoUpdate(sensor_name, sensor_value)
+  def message_to_event(self, kb, message):
+    """Converts a message to an event and posts it to the client."""
+    path = kb.device_path
+    name = self.name_by_path.get(path, '')
+    if not name:
+      self._logger.warning('Illegal state: unknown device name')
+      return
 
-    elif isinstance(msg, kegboard.OnewirePresenceMessage):
-      strval = '%016x' % msg.device_id
-      if msg.status == 1:
-        self._client.SendAuthTokenAdd(FLAGS.tap_name,
-            common_defs.AUTH_MODULE_CORE_ONEWIRE, strval)
-      else:
-        self._client.SendAuthTokenRemove(FLAGS.tap_name,
-            common_defs.AUTH_MODULE_CORE_ONEWIRE, strval)
+    client = self.client
 
-    elif isinstance(msg, kegboard.AuthTokenMessage):
+    if isinstance(message, kegboard.MeterStatusMessage):
+      tap_name = '%s.%s' % (name, message.meter_name)
+      client.SendMeterUpdate(tap_name, message.meter_reading)
+
+    elif isinstance(message, kegboard.TemperatureReadingMessage):
+      sensor_name = '%s.%s' % (name, message.sensor_name)
+      client.SendThermoUpdate(sensor_name, message.sensor_reading)
+
+    elif isinstance(message, kegboard.AuthTokenMessage):
       # For legacy reasons, a kegboard-reported device name of 'onewire' is
       # translated to 'core.onewire'. Any other device names are reported
       # verbatim.
-      device = msg.device
+      device = message.device
       if device == 'onewire':
         device = common_defs.AUTH_MODULE_CORE_ONEWIRE
 
       # Convert the token byte field to little endian string representation.
-      bytes_be = msg.token
+      bytes_be = message.token
       bytes_le = ''
       for b in bytes_be:
         bytes_le = '%02x%s' % (ord(b), bytes_le)
 
-      if msg.status == 1:
-        self._client.SendAuthTokenAdd(FLAGS.tap_name, device, bytes_le)
+      if message.status == 1:
+        client.SendAuthTokenAdd(common_defs.ALIAS_ALL_TAPS, name, bytes_le)
       else:
-        self._client.SendAuthTokenRemove(FLAGS.tap_name, device, bytes_le)
-
-
-class KegboardDeviceIoThread(util.KegbotThread):
-  """Manages all device I/O.
-
-  This thread continuously reads from attached kegboard devices and passes
-  messages to the KegboardManagerThread.
-  """
-  def __init__(self, name, manager, reader):
-    util.KegbotThread.__init__(self, name)
-    self._manager = manager
-    self._reader = reader
-
-  def Ping(self):
-    ping_message = kegboard.PingCommand()
-    self._reader.WriteMessage(ping_message)
-
-  def ThreadMain(self):
-    self._logger.info('Starting reader loop...')
-
-    # Ping the board a couple of times before going into the listen loop.
-    for i in xrange(2):
-      self.Ping()
-
-    initialized = False
-    while not self._quit:
-      try:
-        msg = self._reader.GetNextMessage()
-      except kegboard.UnknownMessageError:
-        self._logger.warning('Read unknown message, skipping')
-        continue
-
-      # Check the reported firmware version. If it is not acceptable, then
-      # drop all messages until it is updated.
-      # TODO(mikey): kill the application when this happens? It isn't strictly
-      # necessary, but is probably the most obvious way to get the point across.
-      if isinstance(msg, kegboard.HelloMessage):
-        version = msg.firmware_version
-        if version >= FLAGS.required_firmware_version:
-          if not initialized:
-            self._logger.info('Found a Kegboard! Firmware version %i' % version)
-            initialized = True
-        else:
-          self._logger.error('Attached kegboard firmware version (%s) is '
-              'less than the required version (%s); please update this '
-              'kegboard.' % (version, FLAGS.required_firmware_version))
-          os._exit(1)
-
-      if not initialized:
-        self.Ping()
-        time.sleep(0.1)
-        continue
-
-      self._manager.PostDeviceMessage('kegboard', msg)
-    self._logger.info('Reader loop ended.')
+        client.SendAuthTokenRemove(common_defs.ALIAS_ALL_TAPS, name, bytes_le)
 
 
 if __name__ == '__main__':

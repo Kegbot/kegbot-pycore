@@ -36,7 +36,6 @@ from kegbot.util import app
 
 from . import kb_threads
 from . import kbevent
-from . import kegnet
 from . import manager
 from . import backend
 
@@ -52,9 +51,6 @@ class KegbotEnv(object):
     self._event_hub = kbevent.EventHub()
     self._logger = logging.getLogger('env')
 
-    self._kegnet_server = kegnet.KegnetServer(name='kegnet', kb_env=self,
-        addr=FLAGS.kb_core_bind_addr)
-
     if not backend_obj:
       backend_obj = backend.WebBackend()
     self._backend = backend_obj
@@ -66,8 +62,7 @@ class KegbotEnv(object):
         self._event_hub, self._flow_manager, self._tap_manager, self._backend)
     self._drink_manager = manager.DrinkManager(self._event_hub, self._backend)
     self._thermo_manager = manager.ThermoManager(self._event_hub, self._backend)
-    self._subscription_manager = manager.SubscriptionManager(self._event_hub,
-        self._kegnet_server)
+    self._subscription_manager = manager.SubscriptionManager(self._event_hub)
 
     self._AttachListeners()
 
@@ -98,9 +93,6 @@ class KegbotEnv(object):
 
   def GetBackend(self):
     return self._backend
-
-  def GetKegnetServer(self):
-    return self._kegnet_server
 
   def GetEventHub(self):
     return self._event_hub
