@@ -33,7 +33,7 @@ def setup_package():
         'distribute',
         'kegbot-pyutils == 0.1.7',
         'kegbot-api == 0.1.8',
-        'kegbot-kegboard == 1.1.1',
+        'kegbot-kegboard == 1.1.2',
         'redis == 2.9.1',
 
         'python-gflags == 2.0',
