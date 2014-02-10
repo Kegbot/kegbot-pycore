@@ -123,10 +123,17 @@ class KegboardManagerApp(app.App):
 
   def add_device(self, path):
     kb = kegboard.Kegboard(path)
+    try:
+      kb.open()
+    except OSError, e:
+      # TODO(mikey): Back off and eventually blacklist device.
+      self._logger.warning('Error opening device at path %s: %s' (path, e))
+      return
+
     self.devices_by_path[path] = kb
     self.status_by_path[path] = STATUS_CONNECTING
     self.name_by_path[path] = ''
-    kb.open()
+
     try:
       kb.ping()
     except IOError:
