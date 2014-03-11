@@ -8,13 +8,16 @@ Install Pycore
   will need to set one up.  Please follow the instructions in
   :ref:`kegbot-install`, then continue here.
 
+Requirements
+------------
+
+* Python 2.7
+* [Redis](http://redis.io/) 2.8
+
+To install Redis on Ubuntu, run `sudo apt-get install redis`.
+
 Set up virtualenv
 -----------------
-
-.. note::
-  If you've already installed Kegbot Server in its own virtualenv, you don't
-  need to create a new one just for Pycore; it's perfectly fine to reuse the
-  existing virtualenv.
 
 The ``virtualenv`` tool creates a directory where Pycore and all of its Python
 dependencies will be stored.  It makes it easier to install and run Pycore

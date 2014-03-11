@@ -34,7 +34,7 @@ Kegnet Local API
 ^^^^^^^^^^^^^^^^
 
 All accessory daemons communicate with the Kegbot Core using the Kegnet Local
-API, a TCP protocol.
+API, which uses Redis as of version 1.1.0.
 
 While you'd usually just run all accessory daemons on the same machine, this
 protocol makes it possible to distribute Kegbot responsibilities across multiple

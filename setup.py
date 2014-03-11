@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 
 DOCLINES = __doc__.split('\n')
 
-VERSION = '1.0.3-pre'
+VERSION = '1.1.0'
 SHORT_DESCRIPTION = DOCLINES[0]
 LONG_DESCRIPTION = '\n'.join(DOCLINES[2:])
 
