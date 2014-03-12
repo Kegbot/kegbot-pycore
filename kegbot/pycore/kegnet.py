@@ -115,7 +115,7 @@ class KegnetClient(object):
 
   def onConnectionError(self, exception):
     """Called when the Listen loop aborts due to connection error."""
-    self._logger.warning('Connection error: %s' % e)
+    self._logger.warning('Connection error: %s' % exception)
 
   def onNewEvent(self, event):
     """Method called whenever a new event is received.
