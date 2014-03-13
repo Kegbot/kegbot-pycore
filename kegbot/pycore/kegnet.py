@@ -23,6 +23,7 @@
 # TODO(mikey): add onDisconnect handler and retry/backoff
 # TODO(mikey): also raise an exception on socket errors
 
+import gflags
 import logging
 import time
 
@@ -32,17 +33,31 @@ from kegbot.util import util
 
 from . import kbevent
 
+FLAGS = gflags.FLAGS
+
+gflags.DEFINE_string('redis_host', '127.0.0.1',
+    'IP address or hostname of the Redis service.')
+
+gflags.DEFINE_integer('redis_port', 6379,
+    'Port number for the Redis service on --redis_host.')
+
 
 CHANNEL_NAME = 'kegnet'
 
 
 class KegnetClient(object):
   def __init__(self):
-    self._redis = redis.Redis()
     self._logger = logging.getLogger('kegnet-client')
+    self.Reconnect()
 
   def Reconnect(self):
-    self._redis = redis.Redis()
+    self._logger.info('Connecting to redis at address %s:%s' % (FLAGS.redis_host, FLAGS.redis_port))
+    self._redis = redis.Redis(host=FLAGS.redis_host, port=FLAGS.redis_port)
+    try:
+      self._redis.ping()
+      self._logger.info('Connected!')
+    except redis.exceptions.ConnectionError, e:
+      self.onConnectionError(e)
 
   def SendMessage(self, message):
     self._redis.publish(CHANNEL_NAME, message.ToJson())

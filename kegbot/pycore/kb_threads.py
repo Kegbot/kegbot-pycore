@@ -19,7 +19,6 @@
 from __future__ import absolute_import
 
 import asyncore
-import redis
 import time
 
 from kegbot.util import util
