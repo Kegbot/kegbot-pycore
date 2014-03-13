@@ -40,17 +40,20 @@ class CoreThread(util.KegbotThread):
 class WatchdogThread(CoreThread):
   """Monitors all threads in _kb_env for crashes."""
   def ThreadMain(self):
+    i = 0
     while not self._quit:
       for thr in self._kb_env.GetThreads():
         if not thr.hasStarted():
           continue
         if not self._quit and not thr.isAlive():
           self._logger.error('Thread %s died unexpectedly' % thr.getName())
+          i += 1
           event = kbevent.QuitEvent()
           self._kb_env.GetEventHub().PublishEvent(event)
           break
       time.sleep(0.5)
-
+      if i >= 5:
+        exit()
 
 class EventHubServiceThread(CoreThread):
   """Handles all event dispatches for the event hub."""
