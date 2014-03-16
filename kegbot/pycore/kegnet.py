@@ -106,19 +106,28 @@ class KegnetClient(object):
     return self.send_message(message)
 
   def Listen(self):
-    ps = self._redis.pubsub()
-    ps.subscribe([self._channel_name])
+    while True:
+      try:
+        ps = self._redis.pubsub()
+        ps.subscribe([self._channel_name])
+        self._logger.info('Listening on redis channel "%s"' % self._channel_name)
 
-    for message in ps.listen():
+        for message in ps.listen():
+          self._handle_message(message)
+      except redis.exceptions.ConnectionError as e:
+        self._logger.warning('Error listening: %s' % e)
+        time.sleep(5)
+
+  def _handle_message(self, message):
       if message['type'] != 'message':
-        continue
+        return
       data = message['data']
 
       try:
         event = kbevent.DecodeEvent(data)
       except ValueError:
         # Forward-compatibility: Ignore unknown events.
-        continue
+        return
 
       self.onNewEvent(event)
       if isinstance(event, kbevent.FlowUpdate):
