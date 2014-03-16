@@ -640,4 +640,4 @@ class SubscriptionManager(Manager):
     if isinstance(event, kbevent.FlowUpdate):
       if event.state == event.FlowState.COMPLETED:
         return
-    self._client.SendMessage(event)
+    self._client.send_message(event)

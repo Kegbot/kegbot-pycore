@@ -20,7 +20,6 @@
 
 # TODO(mikey): need to isolate internal-only events (like QuitEvent) from
 # external ones (like FlowUpdate).
-# TODO(mikey): add onDisconnect handler and retry/backoff
 # TODO(mikey): also raise an exception on socket errors
 
 import gflags
@@ -41,51 +40,54 @@ gflags.DEFINE_string('redis_host', '127.0.0.1',
 gflags.DEFINE_integer('redis_port', 6379,
     'Port number for the Redis service on --redis_host.')
 
-
-CHANNEL_NAME = 'kegnet'
-
+gflags.DEFINE_string('redis_channel_name', 'kegnet',
+    'Pub/sub channel name.')
 
 class KegnetClient(object):
-  def __init__(self):
-    self._logger = logging.getLogger('kegnet-client')
-    self.Reconnect()
+  def __init__(self, host=FLAGS.redis_host, port=FLAGS.redis_port,
+      channel_name=FLAGS.redis_channel_name):
+    self._redis = redis.Redis(host=host, port=port)
+    self._channel_name = channel_name
+    self._logger = logging.getLogger('kegnet')
 
-  def Reconnect(self):
-    self._logger.info('Connecting to redis at address %s:%s' % (FLAGS.redis_host, FLAGS.redis_port))
-    self._redis = redis.Redis(host=FLAGS.redis_host, port=FLAGS.redis_port)
+  def ping(self):
+    """Tests the liveness of the redis connection."""
     try:
-      self._redis.ping()
-      self._logger.info('Connected!')
-    except redis.exceptions.ConnectionError, e:
-      self.onConnectionError(e)
+      return self._redis.ping()
+    except redis.exceptions.ConnectionError as e:
+      return False
 
-  def SendMessage(self, message):
-    self._redis.publish(CHANNEL_NAME, message.ToJson())
+  def send_message(self, message):
+    try:
+      self._redis.publish(self._channel_name, message.ToJson())
+    except redis.exceptions.ConnectionError as e:
+      self._logger.error('Connection unavailable, dropping message: %s' % message)
+      self._logger.debug('Exception was: %s' % e)
 
   ### convenience functions
   def SendMeterUpdate(self, tap_name, meter_reading):
     message = kbevent.MeterUpdate()
     message.tap_name = tap_name
     message.reading = meter_reading
-    return self.SendMessage(message)
+    return self.send_message(message)
 
   def SendFlowStart(self, tap_name):
     message = kbevent.FlowRequest()
     message.tap_name = tap_name
     message.request = message.Action.START_FLOW
-    return self.SendMessage(message)
+    return self.send_message(message)
 
   def SendFlowStop(self, tap_name):
     message = kbevent.FlowRequest()
     message.tap_name = tap_name
     message.request = message.Action.STOP_FLOW
-    return self.SendMessage(message)
+    return self.send_message(message)
 
   def SendThermoUpdate(self, sensor_name, sensor_value):
     message = kbevent.ThermoEvent()
     message.sensor_name = sensor_name
     message.sensor_value = sensor_value
-    return self.SendMessage(message)
+    return self.send_message(message)
 
   def SendAuthTokenAdd(self, tap_name, auth_device_name, token_value):
     message = kbevent.TokenAuthEvent()
@@ -93,7 +95,7 @@ class KegnetClient(object):
     message.auth_device_name = auth_device_name
     message.token_value = token_value
     message.status = message.TokenState.ADDED
-    return self.SendMessage(message)
+    return self.send_message(message)
 
   def SendAuthTokenRemove(self, tap_name, auth_device_name, token_value):
     message = kbevent.TokenAuthEvent()
@@ -101,36 +103,30 @@ class KegnetClient(object):
     message.auth_device_name = auth_device_name
     message.token_value = token_value
     message.status = message.TokenState.REMOVED
-    return self.SendMessage(message)
+    return self.send_message(message)
 
   def Listen(self):
-    try:
-      ps = self._redis.pubsub()
-      ps.subscribe([CHANNEL_NAME])
-      for message in ps.listen():
-        if message['type'] != 'message':
-          continue
-        data = message['data']
+    ps = self._redis.pubsub()
+    ps.subscribe([self._channel_name])
 
-        try:
-          event = kbevent.DecodeEvent(data)
-        except ValueError:
-          # Forward-compatibility: Ignore unknown events.
-          continue
+    for message in ps.listen():
+      if message['type'] != 'message':
+        continue
+      data = message['data']
 
-        self.onNewEvent(event)
-        if isinstance(event, kbevent.FlowUpdate):
-          self.onFlowUpdate(event)
-        elif isinstance(event, kbevent.DrinkCreatedEvent):
-          self.onDrinkCreated(event)
-        elif isinstance(event, kbevent.SetRelayOutputEvent):
-          self.onSetRelayOutput(event)
-    except redis.exceptions.ConnectionError, e:
-      self.onConnectionError(e)
+      try:
+        event = kbevent.DecodeEvent(data)
+      except ValueError:
+        # Forward-compatibility: Ignore unknown events.
+        continue
 
-  def onConnectionError(self, exception):
-    """Called when the Listen loop aborts due to connection error."""
-    self._logger.warning('Connection error: %s' % exception)
+      self.onNewEvent(event)
+      if isinstance(event, kbevent.FlowUpdate):
+        self.onFlowUpdate(event)
+      elif isinstance(event, kbevent.DrinkCreatedEvent):
+        self.onDrinkCreated(event)
+      elif isinstance(event, kbevent.SetRelayOutputEvent):
+        self.onSetRelayOutput(event)
 
   def onNewEvent(self, event):
     """Method called whenever a new event is received.
