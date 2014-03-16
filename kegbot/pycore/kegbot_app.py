@@ -62,7 +62,6 @@ class KegbotEnv(object):
         self._event_hub, self._flow_manager, self._tap_manager, self._backend)
     self._drink_manager = manager.DrinkManager(self._event_hub, self._backend)
     self._thermo_manager = manager.ThermoManager(self._event_hub, self._backend)
-    self._subscription_manager = manager.SubscriptionManager(self._event_hub)
 
     self._AttachListeners()
 
@@ -77,8 +76,7 @@ class KegbotEnv(object):
 
   def _AllManagers(self):
     return (self._tap_manager, self._flow_manager, self._drink_manager,
-        self._thermo_manager, self._authentication_manager,
-        self._subscription_manager)
+        self._thermo_manager, self._authentication_manager)
 
   def _AttachListeners(self):
     for mgr in self._AllManagers():

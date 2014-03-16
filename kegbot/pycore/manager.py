@@ -613,18 +613,3 @@ class AuthenticationManager(Manager):
         return [self._tap_manager.GetTap(tap_name)]
       else:
         return []
-
-
-class SubscriptionManager(Manager):
-  def __init__(self, event_hub):
-    super(SubscriptionManager, self).__init__(event_hub)
-    self._client = kegnet.KegnetClient()
-
-  @EventHandler(kbevent.DrinkCreatedEvent)
-  @EventHandler(kbevent.FlowUpdate)
-  @EventHandler(kbevent.SetRelayOutputEvent)
-  def RepostEvent(self, event):
-    if isinstance(event, kbevent.FlowUpdate):
-      if event.state == event.FlowState.COMPLETED:
-        return
-    self._client.send_message(event)
