@@ -69,6 +69,7 @@ class KegbotEnv(object):
     # Build threads
     self._threads = set()
     self.AddThread(kb_threads.EventHubServiceThread(self, 'eventhub-thread'))
+    self.AddThread(kb_threads.SyncThread(self, 'sync-thread', self._backend))
     self.AddThread(kb_threads.NetProtocolThread(self, 'net-thread'))
     self.AddThread(kb_threads.HeartbeatThread(self, 'heartbeat-thread'))
     self._watchdog_thread = kb_threads.WatchdogThread(self, 'watchdog-thread')
@@ -141,7 +142,5 @@ class KegbotCoreApp(app.App):
     event = kbevent.QuitEvent()
     self._env.GetEventHub().PublishEvent(event)
     time.sleep(0.5)
-    self._logger.info('Stopping any remaining threads')
-    self._StopThreads()
     self._logger.info('Kegbot stopped.')
 

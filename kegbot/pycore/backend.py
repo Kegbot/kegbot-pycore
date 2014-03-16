@@ -25,6 +25,10 @@ from kegbot.api import kbapi
 from . import common_defs
 
 class Backend(object):
+
+  def GetStatus(self):
+    raise NotImplementedError
+
   def GetAllTaps(self):
     raise NotImplementedError
 
@@ -45,6 +49,9 @@ class WebBackend(Backend):
   def __init__(self, api_url=None, api_key=None):
     self._logger = logging.getLogger('api-backend')
     self._client = kbapi.Client(api_url=api_url, api_key=api_key)
+
+  def GetStatus(self):
+    return self._client.Status()
 
   def GetAllTaps(self):
     return self._client.TapStatus()

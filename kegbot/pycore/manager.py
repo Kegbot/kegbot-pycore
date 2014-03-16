@@ -115,6 +115,8 @@ class TapManager(Manager):
     self._meters[name] = FlowMeter(name, max_delta)
 
   def _RemoveTap(self, name):
+    tap = self._taps.get(name)
+    self.logger.info('Removing tap: %s' % tap)
     del self._taps[name]
     del self._meters[name]
 
@@ -143,26 +145,11 @@ class TapManager(Manager):
     delta = meter.SetTicks(value)
     return delta
 
-  @EventHandler(kbevent.StartedEvent)
-  @EventHandler(kbevent.HeartbeatMinuteEvent)
-  def _HandleHeartbeat(self, event):
-    taps = None
+  @EventHandler(kbevent.SyncEvent)
+  def _HandleSync(self, event):
+    new_taps = event.data.get('taps', [])
 
-    try:
-      taps = self._backend.GetAllTaps()
-    except requests.exceptions.ConnectionError, e:
-      self._logger.error('Kegbot backend was unreachable due to socket error: '
-          '%s' % e)
-    except kbapi.ServerError, e:
-      self._logger.error('Kegbot API backend returned a server error: %s' % e)
-
-    if taps is None:
-      self._logger.error('Could not sync taps. Is --api_url correct? (current=%s)' % FLAGS.api_url)
-      return
-
-    for tap in taps:
-      if self.TapExists(tap.meter_name):
-        continue
+    for tap in new_taps:
       self._RegisterOrUpdateTap(tap.meter_name, tap.ml_per_tick,
           relay_name=tap.relay_name)
 

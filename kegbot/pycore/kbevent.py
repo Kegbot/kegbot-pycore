@@ -129,6 +129,8 @@ class SetRelayOutputEvent(Event):
   output_name = EventField()
   output_mode = EventField()
 
+class SyncEvent(Event):
+  data = EventField()
 
 EVENT_NAME_TO_CLASS = {}
 for cls in Event.__subclasses__():

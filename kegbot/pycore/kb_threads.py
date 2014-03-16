@@ -21,6 +21,7 @@ from __future__ import absolute_import
 import asyncore
 import time
 
+from kegbot.api import exceptions as api_exceptions
 from kegbot.util import util
 from . import kbevent
 from . import kegnet
@@ -56,6 +57,43 @@ class EventHubServiceThread(CoreThread):
     hub = self._kb_env.GetEventHub()
     while not self._quit:
       hub.DispatchNextEvent(timeout=0.5)
+
+
+class SyncThread(CoreThread):
+  """Periodically syncs full system status."""
+  def __init__(self, kb_env, name, backend):
+    super(SyncThread, self).__init__(kb_env, name)
+    self._backend = backend
+
+  def sync_now(self):
+    self._logger.debug('Syncing ...')
+    hub = self._kb_env.GetEventHub()
+    try:
+      status = self._backend.GetStatus()
+      self._logger.debug('Sync complete.')
+      self._logger.debug(status)
+    except api_exceptions.Error as e:
+      self._logger.warning('API exception during sync: %s' % e)
+      status = {}
+
+    if status:
+      event = kbevent.SyncEvent()
+      event.data = status
+      hub.PublishEvent(event)
+
+    return status
+
+  def ThreadMain(self):
+    while not self._quit:
+      self._logger.debug('Syncing ...')
+      status = self.sync_now()
+
+      if status.get('current_session'):
+        interval = 10
+      else:
+        interval = 60
+
+      time.sleep(interval)
 
 
 class HeartbeatThread(CoreThread):
