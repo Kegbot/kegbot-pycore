@@ -24,6 +24,14 @@ import socket
 from kegbot.api import kbapi
 from . import common_defs
 
+class BackendException(Exception):
+  """Base exception type."""
+
+
+class DoesNotExistException(BackendException):
+  """Thrown when operating against a non-existing resource."""
+
+
 class Backend(object):
 
   def GetStatus(self):
@@ -56,15 +64,23 @@ class WebBackend(Backend):
   def GetAllTaps(self):
     return self._client.taps()
 
-  def RecordDrink(self, tap_name, ticks, volume_ml=None, username=None,
+  def RecordDrink(self, meter_name, ticks, volume_ml=None, username=None,
       pour_time=None, duration=0, auth_token=None, spilled=False, shout=''):
-    return self._client.record_drink(tap_name=tap_name, ticks=ticks,
-        volume_ml=volume_ml, username=username, pour_time=pour_time,
-        duration=duration, auth_token=auth_token, spilled=spilled,
-        shout=shout)
+    try:
+      return self._client.record_drink(tap_name=meter_name, ticks=ticks,
+          volume_ml=volume_ml, username=username, pour_time=pour_time,
+          duration=duration, auth_token=auth_token, spilled=spilled,
+          shout=shout)
+    except kbapi.NotFoundError as e:
+      raise DoesNotExistException('Cannot record against meter "%s": %s' % (meter_name, e))
+    except kbapi.Error as e:
+      raise BackendException(e)
 
   def CancelDrink(self, seqn, spilled=False):
-    return self._client.cancel_drink(seqn, spilled)
+    try:
+      return self._client.cancel_drink(seqn, spilled)
+    except kbapi.Error as e:
+      raise BackendException(e)
 
   def LogSensorReading(self, sensor_name, temperature, when=None):
     # If the temperature is out of bounds, reject it.

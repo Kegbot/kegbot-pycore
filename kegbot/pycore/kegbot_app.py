@@ -68,7 +68,8 @@ class KegbotEnv(object):
     # Build threads
     self._threads = set()
     self.AddThread(kb_threads.EventHubServiceThread(self, 'eventhub-thread'))
-    self.AddThread(kb_threads.SyncThread(self, 'sync-thread', self._backend))
+    self._sync_thread = kb_threads.SyncThread(self, 'sync-thread', self._backend)
+    self.AddThread(self._sync_thread)
     self.AddThread(kb_threads.NetProtocolThread(self, 'net-thread'))
     self.AddThread(kb_threads.HeartbeatThread(self, 'heartbeat-thread'))
     self._watchdog_thread = kb_threads.WatchdogThread(self, 'watchdog-thread')
@@ -107,6 +108,10 @@ class KegbotEnv(object):
 
   def GetThreads(self):
     return self._threads
+
+  def SyncNow(self):
+    """Visible for testing."""
+    return self._sync_thread.sync_now()
 
 
 class KegbotCoreApp(app.App):

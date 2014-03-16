@@ -26,14 +26,11 @@ class FlowManagerTestCase(unittest.TestCase):
     #self.assertRaises(manager.AlreadyRegisteredError,
     #                  self.tap_manager.RegisterTap, 'flow0', 0, 0)
 
-    self.assertRaises(manager.UnknownTapError,
-                      self.tap_manager.GetTap, 'flow_unknown')
-    self.assertRaises(manager.UnknownTapError,
-                      self.tap_manager.UpdateDeviceReading, 'flow_unknown', 123)
+    self.assertIsNone(self.tap_manager.GetTap('flow_unknown'))
 
     # Our new device should have accumulated 0 volume thus far.
     tap = self.tap_manager.GetTap('flow0')
-    meter = self.tap_manager.GetMeter('flow0')
+    meter = self.flow_manager.GetMeter('flow0')
     self.assertEqual(meter.GetTicks(), 0L)
 
     # Report an instantaneous reading of 2000 ticks. Since this is the first

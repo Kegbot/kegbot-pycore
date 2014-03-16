@@ -70,7 +70,7 @@ class QuitEvent(Event):
   pass
 
 class MeterUpdate(Event):
-  tap_name = EventField()
+  meter_name = EventField()
   reading = EventField()
 
 class FlowUpdate(Event):
@@ -79,18 +79,17 @@ class FlowUpdate(Event):
     IDLE = "idle"
     COMPLETED = "completed"
   flow_id = EventField()
-  tap_name = EventField()
+  meter_name = EventField()
   state = EventField()
   username = EventField()
   start_time = EventField()
   last_activity_time = EventField()
   ticks = EventField()
-  volume_ml = EventField()
 
 class DrinkCreatedEvent(Event):
   flow_id = EventField()
   drink_id = EventField()
-  tap_name = EventField()
+  meter_name = EventField()
   start_time = EventField()
   end_time = EventField()
   username = EventField()
@@ -99,7 +98,7 @@ class TokenAuthEvent(Event):
   class TokenState:
     ADDED = "added"
     REMOVED = "removed"
-  tap_name = EventField()
+  meter_name = EventField()
   auth_device_name = EventField()
   token_value = EventField()
   status = EventField()
@@ -113,7 +112,7 @@ class FlowRequest(Event):
     START_FLOW = "start_flow"
     STOP_FLOW = "stop_flow"
     REPORT_STATUS = "report_status"
-  tap_name = EventField()
+  meter_name = EventField()
   request = EventField()
 
 class HeartbeatSecondEvent(Event):

@@ -33,6 +33,11 @@ TEST_TAPS = [
 ]
 
 class TestBackend(backend.Backend):
+  def GetStatus(self):
+    return {
+      'taps': self.GetAllTaps(),
+    }
+
   def GetAllTaps(self):
     return [util.AttrDict(d) for d in TEST_TAPS]
 
@@ -49,6 +54,9 @@ class KegbotTestCase(unittest.TestCase):
     self.hub.Flush()
 
   def testTapSyncNormal(self):
+    self.kb.SyncNow()
+    self.Flush()
+
     tap_manager = self.kb.GetTapManager()
 
     taps = tap_manager.GetAllTaps()
@@ -56,12 +64,12 @@ class KegbotTestCase(unittest.TestCase):
 
   def testPour(self):
     e = kbevent.MeterUpdate()
-    e.tap_name = 'testflow0'
+    e.meter_name = 'testflow0'
     e.reading = 100
     self.hub.PublishEvent(e)
 
     e = kbevent.MeterUpdate()
-    e.tap_name = 'testflow0'
+    e.meter_name = 'testflow0'
     e.reading = 200
     self.hub.PublishEvent(e)
 

@@ -16,17 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with Pykeg.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Unittest for tap module"""
+"""Unittest for flow module"""
 
 import datetime
 import unittest
 from . import flow
-from . import tap
 
 class FlowTestCase(unittest.TestCase):
   def setUp(self):
-    self.tap = tap.Tap('tap', 100, 'relay')
-    self.flow = flow.Flow(self.tap, 123, username=None, max_idle_secs=10,
+    self.meter_name = 'test.meter'
+    self.flow = flow.Flow(self.meter_name, 123, username=None, max_idle_secs=10,
         when=datetime.datetime.fromtimestamp(0))
 
   def testAddTicks(self):
@@ -40,9 +39,8 @@ class FlowTestCase(unittest.TestCase):
 
     self.assertEquals(None, e.username)
     self.assertEquals(123, e.flow_id)
-    self.assertEquals('tap', e.tap_name)
+    self.assertEquals(self.meter_name, e.meter_name)
     self.assertEquals('active', e.state)
     self.assertEquals(datetime.datetime.fromtimestamp(0), e.start_time)
     self.assertEquals(datetime.datetime.fromtimestamp(20), e.last_activity_time)
     self.assertEquals(10, e.ticks)
-    self.assertEquals(1000, e.volume_ml)

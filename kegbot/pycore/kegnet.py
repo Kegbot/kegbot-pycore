@@ -65,21 +65,21 @@ class KegnetClient(object):
       self._logger.debug('Exception was: %s' % e)
 
   ### convenience functions
-  def SendMeterUpdate(self, tap_name, meter_reading):
+  def SendMeterUpdate(self, meter_name, meter_reading):
     message = kbevent.MeterUpdate()
-    message.tap_name = tap_name
+    message.meter_name = meter_name
     message.reading = meter_reading
     return self.send_message(message)
 
-  def SendFlowStart(self, tap_name):
+  def SendFlowStart(self, meter_name):
     message = kbevent.FlowRequest()
-    message.tap_name = tap_name
+    message.meter_name = meter_name
     message.request = message.Action.START_FLOW
     return self.send_message(message)
 
-  def SendFlowStop(self, tap_name):
+  def SendFlowStop(self, meter_name):
     message = kbevent.FlowRequest()
-    message.tap_name = tap_name
+    message.meter_name = meter_name
     message.request = message.Action.STOP_FLOW
     return self.send_message(message)
 
@@ -89,17 +89,17 @@ class KegnetClient(object):
     message.sensor_value = sensor_value
     return self.send_message(message)
 
-  def SendAuthTokenAdd(self, tap_name, auth_device_name, token_value):
+  def SendAuthTokenAdd(self, meter_name, auth_device_name, token_value):
     message = kbevent.TokenAuthEvent()
-    message.tap_name = tap_name
+    message.meter_name = meter_name
     message.auth_device_name = auth_device_name
     message.token_value = token_value
     message.status = message.TokenState.ADDED
     return self.send_message(message)
 
-  def SendAuthTokenRemove(self, tap_name, auth_device_name, token_value):
+  def SendAuthTokenRemove(self, meter_name, auth_device_name, token_value):
     message = kbevent.TokenAuthEvent()
-    message.tap_name = tap_name
+    message.meter_name = meter_name
     message.auth_device_name = auth_device_name
     message.token_value = token_value
     message.status = message.TokenState.REMOVED

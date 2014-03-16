@@ -209,7 +209,7 @@ class KegUi:
     f.GetWidget('when').set_contents(when)
 
   def HandleFlowStatus(self, event):
-    tap_name = event.tap_name
+    tap_name = event.meter_name
     last_status = self._flow_status_by_tap.get(tap_name)
     self._flow_status_by_tap[tap_name] = event
 
