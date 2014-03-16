@@ -272,10 +272,10 @@ class KrestUpdaterThread(util.KegbotThread):
     while not self._quit:
       self._logger.info('Fetching krest status')
       try:
-        tap_status = self._client.TapStatus()
+        tap_status = self._client.taps()
         self._lcdui.UpdateFromTapStatus(tap_status)
         last_drink = None
-        last_drinks = self._client.AllDrinks()
+        last_drinks = self._client.drinks()
         if last_drinks:
           last_drink = last_drinks[0]
         username = 'unknown'

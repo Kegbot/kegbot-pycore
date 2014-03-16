@@ -51,20 +51,20 @@ class WebBackend(Backend):
     self._client = kbapi.Client(api_url=api_url, api_key=api_key)
 
   def GetStatus(self):
-    return self._client.Status()
+    return self._client.status()
 
   def GetAllTaps(self):
-    return self._client.TapStatus()
+    return self._client.taps()
 
   def RecordDrink(self, tap_name, ticks, volume_ml=None, username=None,
       pour_time=None, duration=0, auth_token=None, spilled=False, shout=''):
-    return self._client.RecordDrink(tap_name=tap_name, ticks=ticks,
+    return self._client.record_drink(tap_name=tap_name, ticks=ticks,
         volume_ml=volume_ml, username=username, pour_time=pour_time,
         duration=duration, auth_token=auth_token, spilled=spilled,
         shout=shout)
 
   def CancelDrink(self, seqn, spilled=False):
-    return self._client.CancelDrink(seqn, spilled)
+    return self._client.cancel_drink(seqn, spilled)
 
   def LogSensorReading(self, sensor_name, temperature, when=None):
     # If the temperature is out of bounds, reject it.
@@ -74,7 +74,7 @@ class WebBackend(Backend):
       raise ValueError, 'Temperature out of bounds'
 
     try:
-      return self._client.LogSensorReading(sensor_name, temperature, when)
+      return self._client.log_sensor_reading(sensor_name, temperature, when)
     except kbapi.NotFoundError:
       self._logger.warning('No sensor on backend named "%s"' % (sensor_name,))
       return None
@@ -87,7 +87,7 @@ class WebBackend(Backend):
 
   def GetAuthToken(self, auth_device, token_value):
     try:
-      return self._client.GetToken(auth_device, token_value)
+      return self._client.get_token(auth_device, token_value)
     except kbapi.NotFoundError:
       raise
     except socket.error:
