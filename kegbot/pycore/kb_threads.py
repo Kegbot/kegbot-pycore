@@ -28,7 +28,7 @@ from . import kegnet
 class CoreThread(util.KegbotThread):
   """ Convenience wrapper around a threading.Thread """
   def __init__(self, kb_env, name):
-    util.KegbotThread.__init__(self, name)
+    super(CoreThread, self).__init__(name)
     self._kb_env = kb_env
     self._kb_env.GetEventHub().Subscribe(kbevent.QuitEvent, self._HandleQuit)
 
@@ -44,11 +44,9 @@ class WatchdogThread(CoreThread):
       for thr in self._kb_env.GetThreads():
         if not thr.hasStarted():
           continue
-        if not self._quit and not thr.isAlive():
+        if not thr.isAlive():
           self._logger.error('Thread %s died unexpectedly' % thr.getName())
-          event = kbevent.QuitEvent()
-          self._kb_env.GetEventHub().PublishEvent(event)
-          break
+          self.Quit()
       time.sleep(0.5)
 
 
