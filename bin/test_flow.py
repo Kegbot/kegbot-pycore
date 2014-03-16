@@ -44,6 +44,9 @@ gflags.DEFINE_float('delay_seconds', 0.1,
     '0, there will be no delay.',
     lower_bound=0, upper_bound=60)
 
+gflags.DEFINE_string('meter_name', 'kegboard.flow0',
+    'Meter name for sending flow data.')
+
 gflags.DEFINE_string('auth_token', '',
     'If specified, sends auth_device|token as attached.')
 
@@ -84,27 +87,24 @@ class FakeKegboardApp(app.App):
       auth_device, token_value = None, None
 
     if auth_device and token_value:
-      client.SendAuthTokenAdd(FLAGS.tap_name, auth_device, token_value)
-      client.SendAuthTokenRemove(FLAGS.tap_name, auth_device, token_value)
-      client.SendAuthTokenAdd(FLAGS.tap_name, auth_device, token_value)
+      client.SendAuthTokenAdd(FLAGS.meter_name, auth_device, token_value)
+      client.SendAuthTokenRemove(FLAGS.meter_name, auth_device, token_value)
+      client.SendAuthTokenAdd(FLAGS.meter_name, auth_device, token_value)
 
     if FLAGS.explicit_start_stop:
-      client.SendFlowStart(FLAGS.tap_name)
+      client.SendFlowStart(FLAGS.meter_name)
 
     for amt in flow:
       self._logger.info('Sending flow update: %i' % amt)
-      client.SendMeterUpdate(FLAGS.tap_name, amt)
+      client.SendMeterUpdate(FLAGS.meter_name, amt)
       if FLAGS.delay_seconds:
         time.sleep(FLAGS.delay_seconds)
 
     if auth_device and token_value:
-      client.SendAuthTokenRemove(FLAGS.tap_name, auth_device, token_value)
+      client.SendAuthTokenRemove(FLAGS.meter_name, auth_device, token_value)
 
     if FLAGS.explicit_start_stop:
-      client.SendFlowStop(FLAGS.tap_name)
-
-    client.close_when_done()
-    time.sleep(3.0)
+      client.SendFlowStop(FLAGS.meter_name)
 
 if __name__ == '__main__':
   FakeKegboardApp.BuildAndRun(name='test_flow')
