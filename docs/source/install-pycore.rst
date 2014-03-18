@@ -13,6 +13,7 @@ Requirements
 
 * Python 2.7
 * [Redis](http://redis.io/) 2.8
+* [Kegbot Server](https://github.com/Kegbot/kegbot-server) v0.9.18 or later.
 
 To install Redis on Ubuntu, run `sudo apt-get install redis`.
 

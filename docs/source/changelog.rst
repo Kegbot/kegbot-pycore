@@ -3,6 +3,21 @@
 Changelog
 =========
 
+Current Version (in development)
+--------------------------------
+
+* Improved error handling.
+* Kegbot Server v0.9.18 (or later) is required.
+* Fixes a bug introduced in v1.1.0 that could cause flow meter reports on an
+  inactive kegboard.
+
+Version 1.1.0 (2014-03-11)
+--------------------------
+
+* Pending pours are robustly retried.
+* Internal: Redis is now required, replacing the internal "kegnet" protocol
+  for event dispatching between daemons.
+
 Version 1.0.2 (2012-10-30)
 --------------------------
 
