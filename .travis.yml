@@ -6,6 +6,7 @@ services:
   - redis-server
 
 install:
+  - pip install nose --use-mirrors
   - pip install . --use-mirrors
 
 script:

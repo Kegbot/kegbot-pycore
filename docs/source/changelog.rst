@@ -3,8 +3,8 @@
 Changelog
 =========
 
-Current Version (in development)
---------------------------------
+Version 1.1.1 (2013-03-19)
+--------------------------
 
 * Improved error handling.
 * Kegbot Server v0.9.18 (or later) is required.
