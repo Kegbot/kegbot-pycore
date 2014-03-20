@@ -35,6 +35,7 @@ class Flow:
     self._end_time = when
     self._last_log_time = None
     self._total_ticks = 0L
+    self._volume_ml = None 
 
   def __str__(self):
     return '<Flow 0x%08x: meter_name=%s ticks=%s username=%s max_idle=%s>' % (self._flow_id,
@@ -53,14 +54,17 @@ class Flow:
     event.start_time = self._start_time
     event.last_activity_time = self._end_time
     event.ticks = self.GetTicks()
+    event.volume_ml = self.GetVolumeMl()
 
     return event
 
-  def AddTicks(self, amount, when=None):
+  def AddTicks(self, amount, when=None, tap=None):
     self._total_ticks += amount
     if when is None:
       when = datetime.datetime.now()
     self._end_time = when
+    if tap is not None:
+        self._volume_ml = tap.TicksToMilliliters(self._total_ticks)
 
   def GetId(self):
     return self._flow_id
@@ -73,6 +77,9 @@ class Flow:
 
   def GetTicks(self):
     return self._total_ticks
+
+  def GetVolumeMl(self):
+    return self._volume_ml
 
   def GetUsername(self):
     return self._bound_username

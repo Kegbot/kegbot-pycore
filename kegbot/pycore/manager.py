@@ -226,6 +226,7 @@ class FlowManager(Manager):
       Flow may be None if no update occurred.
     """
     meter = self.GetMeter(meter_name)
+    tap = self._tap_manager.GetTap(meter_name)
     delta = meter.SetTicks(meter_reading)
     self._logger.debug('Flow update: tap=%s meter_reading=%i (delta=%i)' %
         (meter_name, meter_reading, delta))
@@ -238,7 +239,7 @@ class FlowManager(Manager):
     if when is None:
       when = datetime.datetime.now()
 
-    flow.AddTicks(delta, when)
+    flow.AddTicks(delta, when, tap)
     self._PublishUpdate(flow)
     return flow, is_new
 
@@ -330,19 +331,24 @@ class DrinkManager(Manager):
         self._pending.append(event)
 
   def _PostDrink(self, event):
-    self._logger.info('Processing pending drink: flow_id=0x%08x, meter=%s' % (
-      event.flow_id, event.meter_name))
-
     ticks = event.ticks
     username = event.username
     meter_name = event.meter_name
+    volume_ml = event.volume_ml
     pour_time = event.last_activity_time
     duration = (event.last_activity_time - event.start_time).seconds
     flow_id = event.flow_id
 
+    self._logger.info('Processing pending drink: flow_id=0x%08x, meter=%s, volume=%i' % (
+      event.flow_id, event.meter_name, volume_ml))
+
     # TODO: add to flow event
     auth_token = None
 
+    if volume_ml is not None and volume_ml < common_defs.MIN_VOLUME_TO_RECORD:
+        self._logger.info('Not recording flow: (%i mL) <= '
+            'MIN_VOLUME_TO_RECORD (%i)' % (volume_ml, common_defs.MIN_VOLUME_TO_RECORD))
+        return
     if ticks <= 0:
         self._logger.info('Not recording flow: no ticks.')
         return
