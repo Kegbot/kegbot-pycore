@@ -1,8 +1,7 @@
 .. _pycore-guide:
 
-============
-Pycore Guide
-============
+Pycore Software Manual
+======================
 
 Pycore is Kegbot's legacy frontend and "core" controller.  It is a collection of
 command-line programs that talk to the Kegbot hardware and server. Though it is

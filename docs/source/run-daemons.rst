@@ -138,102 +138,17 @@ So far we've covered running the Pycore applications in the foreground.  But
 once you've got your system all setup, you'll probably want your Linux box to
 run all the daemons automatically.
 
-Kegbot isn't much different than other Linux daemons in this regard, so you have
-a number of options.
-
-Using kegbot_master
-^^^^^^^^^^^^^^^^^^^
-
-Kegbot ships with a simple daemon launcher/monitor program,
-**kegbot_master.py**.
-
-Most of the documentation for *kegbot_master.py* can be found in its example
-configuration file::
-
-  ### kegbot_master config file
-  
-  # This file lists applications to run as daemons.  They can be collectively
-  # started and stopped with kegbot_master.py.
-  #
-  # Each section defines an application to run; the name of the section is
-  # typically the name of the program, but does not have to be (see example use of
-  # _program_name below).
-  #
-  # Each value in the section gives a command line flag and value to use.  Values
-  # that begin with an underscore are special values that are only used by
-  # kegbot_master.  Current special values:
-  #   _pidfile_dir: the value of the kegbot_master flag --pidfile_dir
-  #   _logfile_dir: the value of the kegbot_master flag --logfile_dir
-  #   _enabled: indicates whether the app defined in this section should be
-  #             started
-  #
-  # Each section also has several default flags and values, which can be
-  # overridden on an app-by-app basis. Those flags are:
-  #   pidfile: the default value is `<pidfile dir>/<app_name>.pid`
-  #   daemon: the default value is True (and should not be changed)
-  #   log_to_stdout: the default value is False (and should not be changed)
-  #   log_to_file: the default value is True
-  #   logfile: the default value is `<logfile dir>/<app_name>.log`
-  #
-  # You can substitute values in your flag definitions. For example:
-  #   [myapp]
-  #   _program_name = whatever.py
-  #   logfile = /tmp/%(__name__)s.log
-  #
-  # In this example, the special value `__name__` is replaced with the name of the
-  # application section (myapp). The final command that executes would be:
-  #   whatever.py --logfile=/tmp/myapp.log [.. other defaults ..]
-  #
-  # You can run `kegbot_master.py configtest` to see what commands your config
-  # file would execute if `start` was called.
-  
-  
-  ### Apps
-  
-  [kegbot_core]
-  _enabled = True
-  api_url = 'http://example.com/api'
-  api_key = 'API_KEY'
-  
-  [kegboard_daemon]
-  _enabled = True
-  kegboard_device = /dev/ttyUSB0
-  
-  [lcd_daemon]
-  _enabled = False
-  lcd_device_path = /dev/ttyUSB1
-  
-  [sound_server]
-  _enabled = True
-  
-  [second_kegboard]
-  # Example showing a second instance of kegboard_daemon.
-  _enabled = False
-  
-  # Normally, the section name is used to automatically generate the value of
-  # _program_name. However, we want to run kegboard_daemon twice, and we can't
-  # have two sections named '[kegboard_daemon]'.
-  #
-  # To get around this, we name this section whatever we want ([second_kegboard]),
-  # and manually specify the _program_name variable.
-  _program_name = kegboard_daemon.py
-  
-  # Other kegboard_daemon flags.
-  kegboard_name = second_tap
-  kegboard_device = /dev/ttyUSB2
-  
-  [fb_publisher]
-  # Facebook publisher.
-  _enabled = False
-  
-  [kegbot_twitter]
-  # Twitter publisher.
-  _enabled = False
-
-
-Using Supervisor
-^^^^^^^^^^^^^^^^
-
 An excellent and widely used third-party process monitor is
-`Supervisor <http://supervisord.org/>`_. Please see its detailed
-documentation for instructions.
+`Supervisor <http://supervisord.org/>`_. Here's a sample configuration file
+you can use with it::
+
+  ### Supervisor.conf for pycore
+  
+  [program:kegbot_core]
+  command=su -l pi -c '/usr/local/bin/kegbot_core.py --api_url=http://localhost:8000/api --api_key=f00bar'
+  directory=/home/pi
+  autostart=true
+  autorestart=true
+  redirect_stderr=true
+
+For other options, consult the Supervisor docs.

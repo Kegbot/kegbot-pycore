@@ -12,10 +12,12 @@ Requirements
 ------------
 
 * Python 2.7
-* [Redis](http://redis.io/) 2.8
-* [Kegbot Server](https://github.com/Kegbot/kegbot-server) v0.9.18 or later.
+* `Redis <http://redis.io/>`_ 2.8
+* `Kegbot Server <https://github.com/Kegbot/kegbot-server>`_ v0.9.18 or later.
 
-To install Redis on Ubuntu, run `sudo apt-get install redis`.
+To install Redis on Ubuntu, run `sudo apt-get install redis`.  To install
+Kegbot Server, refer to the
+`Kegbot Server Install Guide <https://kegbot.org/docs/server>`_.
 
 Set up virtualenv
 -----------------
