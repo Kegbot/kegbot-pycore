@@ -339,7 +339,7 @@ class DrinkManager(Manager):
     duration = (event.last_activity_time - event.start_time).seconds
     flow_id = event.flow_id
 
-    self._logger.info('Processing pending drink: flow_id=0x%08x, meter=%s, volume=%i' % (
+    self._logger.info('Processing pending drink: flow_id=0x%08x, meter=%s, volume=%s' % (
       event.flow_id, event.meter_name, volume_ml))
 
     # TODO: add to flow event
