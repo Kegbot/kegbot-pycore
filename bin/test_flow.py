@@ -32,7 +32,7 @@ FLAGS = gflags.FLAGS
 
 gflags.DEFINE_integer('ticks', 1000,
     'Number of ticks to send.',
-    lower_bound=1)
+    lower_bound=0)
 
 gflags.DEFINE_integer('steps', 10,
     'Number of updates to send --ticks.  In other words, '
@@ -82,10 +82,11 @@ class FakeKegboardApp(app.App):
     flow = SmoothFlow(FLAGS.ticks, FLAGS.steps)
 
     try:
-      auth_device, token_value = FLAGS.auth_token.split('|')
+      auth_device, token_value = FLAGS.auth_token.split(':')
     except ValueError:
       auth_device, token_value = None, None
 
+    self._logger.info('Token: {}:{}'.format(auth_device, token_value))
     if auth_device and token_value:
       client.SendAuthTokenAdd(FLAGS.meter_name, auth_device, token_value)
       client.SendAuthTokenRemove(FLAGS.meter_name, auth_device, token_value)

@@ -226,9 +226,9 @@ class KegboardManagerApp(app.App):
         bytes_le = '%02x%s' % (ord(b), bytes_le)
 
       if message.status == 1:
-        client.SendAuthTokenAdd(common_defs.ALIAS_ALL_TAPS, name, bytes_le)
+        client.SendAuthTokenAdd(common_defs.ALIAS_ALL_TAPS, device, bytes_le)
       else:
-        client.SendAuthTokenRemove(common_defs.ALIAS_ALL_TAPS, name, bytes_le)
+        client.SendAuthTokenRemove(common_defs.ALIAS_ALL_TAPS, device, bytes_le)
 
 
 if __name__ == '__main__':

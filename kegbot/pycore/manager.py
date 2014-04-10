@@ -458,7 +458,7 @@ class TokenRecord:
     self.status = self.STATUS_ACTIVE
 
   def __str__(self):
-    return '%s=%s@%s' % self.AsTuple()
+    return '%s:%s@%s' % self.AsTuple()
 
   def AsTuple(self):
     return (self.auth_device, self.token_value, self.meter_name)
@@ -492,6 +492,8 @@ class AuthenticationManager(Manager):
 
   @EventHandler(kbevent.TokenAuthEvent)
   def HandleAuthTokenEvent(self, event):
+    taps = self._GetTapsForTapName(event.meter_name)
+    self._logger.info('event={} taps={}'.format(event, taps))
     for tap in self._GetTapsForTapName(event.meter_name):
       record = self._GetRecord(event.auth_device_name, event.token_value,
           tap.GetName())
@@ -577,10 +579,10 @@ class AuthenticationManager(Manager):
     self._MaybeEndFlow(record)
 
   def _GetTapsForTapName(self, meter_name):
-    if meter_name == common_defs.ALIAS_ALL_TAPS:
+    if not meter_name or meter_name == common_defs.ALIAS_ALL_TAPS:
       return self._tap_manager.GetAllTaps()
     else:
       tap = self._tap_manager.GetTap(meter_name)
       if tap:
         return [tap]
-      return None
+      return []
