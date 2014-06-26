@@ -3,7 +3,18 @@
 Changelog
 =========
 
-Version 1.1.1 (2013-03-19)
+Version 1.1.3 (2014-06-26)
+--------------------------
+
+* Bugfix: Send kegboard device names.
+* Fix dependencies for concurrent installs with ``kegbot-server``.
+
+Version 1.1.2 (2014-04-14)
+--------------------------
+
+* Bugfix: Small pour detection.
+
+Version 1.1.1 (2014-03-19)
 --------------------------
 
 * Improved error handling.
