@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 
 DOCLINES = __doc__.split('\n')
 
-VERSION = '1.1.2'
+VERSION = '1.1.3a1'
 SHORT_DESCRIPTION = DOCLINES[0]
 LONG_DESCRIPTION = '\n'.join(DOCLINES[2:])
 
@@ -17,9 +17,9 @@ def setup_package():
       version = VERSION,
       description = SHORT_DESCRIPTION,
       long_description = LONG_DESCRIPTION,
-      author = 'mike wakerly',
-      author_email = 'opensource@hoho.com',
-      url = 'http://kegbot.org/docs/pycore',
+      author = 'Bevbot LLC',
+      author_email = 'info@bevbot.com',
+      url = 'https://kegbot.org/docs/pycore',
       packages = find_packages(exclude=['testdata']),
       namespace_packages = ['kegbot'],
       scripts = [
@@ -31,9 +31,9 @@ def setup_package():
       ],
       install_requires = [
         'kegbot-pyutils == 0.1.7',
-        'kegbot-api == 0.1.14',
+        'kegbot-api >= 0.1.16',
         'kegbot-kegboard == 1.1.2',
-        'redis == 2.9.1',
+        'redis >= 2.9.1, < 3.0',
 
         'python-gflags == 2.0',
       ],
