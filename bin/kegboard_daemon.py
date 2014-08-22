@@ -175,9 +175,10 @@ class KegboardManagerApp(app.App):
     if isinstance(message, kegboard.HelloMessage):
       if self.get_status(path) == STATUS_CONNECTING:
         if message.serial_number:
-          name = 'kegboard-%s' % (message.serial_number[-4:],)
+          name = 'kegboard-%s' % (message.serial_number[-8:],)
         else:
           name = 'kegboard'
+        name = name.lower()
         self._logger.info('Device %s is named: %s' % (kb, name))
 
         if name in self.name_by_path.values():
