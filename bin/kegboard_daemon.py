@@ -127,7 +127,7 @@ class KegboardManagerApp(app.App):
       kb.open()
     except OSError, e:
       # TODO(mikey): Back off and eventually blacklist device.
-      self._logger.warning('Error opening device at path %s: %s' (path, e))
+      self._logger.warning('Error opening device at path {}: {}'.format(path, e))
       return
 
     self.devices_by_path[path] = kb
