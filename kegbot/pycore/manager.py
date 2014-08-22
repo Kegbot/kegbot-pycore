@@ -116,6 +116,14 @@ class TapManager(Manager):
       self._RegisterOrUpdateTap(tap.meter_name, tap.ml_per_tick,
           relay_name=tap.relay_name)
 
+  @EventHandler(kbevent.ControllerConnectedEvent)
+  def _HandleControllerConnected(self, event):
+    try:
+      controller = self._backend.CreateController(event.controller_name)
+      self._logger.info('Created new controller: {}'.format(controller))
+    except backend.BackendException as e:
+      self._logger.info('Not creating controller: {}'.format(e))
+
 class FlowManager(Manager):
   """Class reponsible for maintaining and servicing flows."""
   def __init__(self, event_hub, tap_manager):

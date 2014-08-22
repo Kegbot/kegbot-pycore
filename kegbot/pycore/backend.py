@@ -53,6 +53,9 @@ class Backend(object):
   def GetAuthToken(self, auth_device, token_value):
     raise NotImplementedError
 
+  def CreateController(self, controller_name):
+    raise NotImplementedError
+
 class WebBackend(Backend):
   def __init__(self, api_url=None, api_key=None):
     self._logger = logging.getLogger('api-backend')
@@ -109,3 +112,13 @@ class WebBackend(Backend):
     except socket.error:
       self._logger.warning('Socket error fetching token; ignoring.')
       raise kbapi.NotFoundError()
+
+  def CreateController(self, controller_name):
+    try:
+      controller = self._client.create_controller(controller_name)
+      # Create default meters.
+      for meter in ('flow0', 'flow1'):
+        self._client.create_flow_meter(controller['id'], meter)
+      return controller
+    except kbapi.Error as e:
+      raise BackendException(e)

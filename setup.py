@@ -31,7 +31,7 @@ def setup_package():
       ],
       install_requires = [
         'kegbot-pyutils == 0.1.7',
-        'kegbot-api >= 0.1.16',
+        'kegbot-api >= 0.1.17',
         'kegbot-kegboard == 1.1.2',
         'redis >= 2.9.1, < 3.0',
 
