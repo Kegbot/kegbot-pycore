@@ -187,6 +187,7 @@ class KegboardManagerApp(app.App):
         else:
           self.status_by_path[path] = STATUS_CONNECTED
           self.name_by_path[path] = name
+          self.client.SendControllerConnectedEvent(name)
 
     if self.status_by_path[path] != STATUS_CONNECTED:
       self._logger.debug('Ignoring message, device disconnected')

@@ -116,6 +116,9 @@ class FlowRequest(Event):
   meter_name = EventField()
   request = EventField()
 
+class ControllerConnectedEvent(Event):
+  controller_name = EventField()
+
 class HeartbeatSecondEvent(Event):
   pass
 

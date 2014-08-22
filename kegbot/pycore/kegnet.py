@@ -65,6 +65,11 @@ class KegnetClient(object):
       self._logger.debug('Exception was: %s' % e)
 
   ### convenience functions
+  def SendControllerConnectedEvent(self, controller_name):
+    message = kbevent.ControllerConnectedEvent()
+    message.controller_name = controller_name
+    return self.send_message(message)
+
   def SendMeterUpdate(self, meter_name, meter_reading):
     message = kbevent.MeterUpdate()
     message.meter_name = meter_name
