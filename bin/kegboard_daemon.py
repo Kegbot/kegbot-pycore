@@ -47,7 +47,6 @@ from kegbot.util import app
 from kegbot.util import util
 
 from kegbot.pycore import common_defs
-from kegbot.pycore import kbevent
 from kegbot.pycore import kegnet
 from kegbot.kegboard import kegboard
 
@@ -179,7 +178,8 @@ class KegboardManagerApp(app.App):
           name = 'kegboard-%s' % (message.serial_number[-4:],)
         else:
           name = 'kegboard'
-        self._logger.info('Devices %s is named: %s' % (kb, name))
+        self._logger.info('Device %s is named: %s' % (kb, name))
+
         if name in self.name_by_path.values():
           self._logger.warning('Device with this name already exists! Disabling it.')
           self.status_by_path[path] = STATUS_NEED_UPDATE
