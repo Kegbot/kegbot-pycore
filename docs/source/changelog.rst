@@ -3,6 +3,17 @@
 Changelog
 =========
 
+Version 1.2.1 (2015-01-27)
+--------------------------
+
+* Limit maximum number of failed event retries (issue #6)
+
+Version 1.2.0 (2014-08-21)
+--------------------------
+
+* Automatically create a controller on the server when one is connected.
+* Use 8-character kegboard names.
+
 Version 1.1.3 (2014-06-26)
 --------------------------
 
