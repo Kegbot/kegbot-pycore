@@ -41,6 +41,13 @@ from kegbot.util import util
 
 FLAGS = gflags.FLAGS
 
+gflags.DEFINE_integer('retry_interval', 10,
+    'Number of seconds between retrying failed events.',
+    lower_bound=1)
+
+gflags.DEFINE_integer('maximum_event_retries', 3,
+    'Maximum number of times to retry posting updates to the backend.',
+    lower_bound=0)
 
 def EventHandler(event_type):
   def decorate(f):
@@ -309,6 +316,7 @@ class DrinkManager(Manager):
     super(DrinkManager, self).__init__(event_hub)
     self._backend = backend_obj
     self._pending = []
+    self._last_flush_time = 0
 
   @EventHandler(kbevent.FlowUpdate)
   def HandleFlowUpdateEvent(self, event):
@@ -318,11 +326,18 @@ class DrinkManager(Manager):
       self._pending.append(event)
       self._FlushPending()
 
-  @EventHandler(kbevent.HeartbeatMinuteEvent)
+  @EventHandler(kbevent.HeartbeatSecondEvent)
   def _HandleHeartbeat(self, event):
-    self._FlushPending()
+    if not self._pending:
+      return
+
+    need_flush = abs(time.time() - self._last_flush_time) > FLAGS.retry_interval
+    if need_flush:
+      self._FlushPending()
 
   def _FlushPending(self):
+    self._last_flush_time = time.time()
+
     if not self._pending:
       return
 
@@ -336,7 +351,20 @@ class DrinkManager(Manager):
         self._PostDrink(event)
       except backend.BackendException as e:
         self._logger.warning('Error posting drink: %s' % e)
-        self._pending.append(event)
+
+        # Retry posting the event a finite number of times.
+        # TODO(mikey): Some events can be considered fatal immediately.
+        retries = getattr(event, 'retries', None)
+        if retries is None:
+          event.retries = FLAGS.maximum_event_retries
+        event.retries -= 1
+
+        if event.retries:
+          self._logger.info('Will retry event {} more time{}.'.format(
+            event.retries, '' if event.retries == 1 else 's'))
+          self._pending.append(event)
+        else:
+          self._logger.warning('Max retries exceeded; dropping event.')
 
   def _PostDrink(self, event):
     ticks = event.ticks
