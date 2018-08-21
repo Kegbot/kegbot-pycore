@@ -132,6 +132,9 @@ class SetRelayOutputEvent(Event):
   output_name = EventField()
   output_mode = EventField()
 
+class UserAuthenticatedEvent(Event):
+  username = EventField()
+  
 class SyncEvent(Event):
   data = EventField()
 
