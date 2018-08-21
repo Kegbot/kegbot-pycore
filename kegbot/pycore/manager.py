@@ -284,6 +284,10 @@ class FlowManager(Manager):
   def _PublishRelayEvent(self, flow, enable=True):
     self._logger.debug('Publishing relay event: flow=%s, enable=%s' % (flow,
         enable))
+			
+    client = kegnet.KegnetClient()
+    client.SendUserAuthenticated(flow.GetUsername())
+		
     tap = self._tap_manager.GetTap(flow.GetMeterName())
     if not tap:
       # Unknown meter; don't attempt to enable any relays for it

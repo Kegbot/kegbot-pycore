@@ -109,6 +109,11 @@ class KegnetClient(object):
     message.token_value = token_value
     message.status = message.TokenState.REMOVED
     return self.send_message(message)
+	  
+  def SendUserAuthenticated(self, username):
+    message = kbevent.UserAuthenticatedEvent()
+    message.username = username
+    return self.send_message(message)
 
   def Listen(self):
     while True:
