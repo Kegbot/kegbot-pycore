@@ -558,19 +558,19 @@ class AuthenticationManager(Manager):
     except kbapi.NotFoundError:
       pass
 	  
-	client = kegnet.KegnetClient()  
+    client = kegnet.KegnetClient()  
 
     if not username:
-	  client.SendUserAuthenticated('')
+      client.SendUserAuthenticated('')
       self._logger.info('Token not assigned: %s' % record)
       return
 
     if not token.enabled:
-	  client.SendUserAuthenticated('')
+      client.SendUserAuthenticated('')
       self._logger.info('Token disabled: %s' % record)
       return
 
-	client.SendUserAuthenticated(username)  
+    client.SendUserAuthenticated(username)  
     max_idle = common_defs.AUTH_DEVICE_MAX_IDLE_SECS.get(record.auth_device)
     if max_idle is None:
       max_idle = common_defs.AUTH_DEVICE_MAX_IDLE_SECS['default']
