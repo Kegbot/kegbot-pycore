@@ -61,9 +61,9 @@ STATUS_CONNECTED = 'connected'
 STATUS_NEED_UPDATE = 'need-update'
 
 class KegboardKegnetClient(kegnet.KegnetClient):
-  def __init__(self, reader, addr=None):
-    kegnet.KegnetClient.__init__(self, addr)
-    self._reader = reader
+  def __init__(self, kb_main):
+    kegnet.KegnetClient.__init__(self)
+    self._kb = kb_main
 
   def onSetRelayOutput(self, event):
     self._logger.debug('Responding to relay event: %s' % event)
@@ -80,11 +80,22 @@ class KegboardKegnetClient(kegnet.KegnetClient):
 
     # TODO(mikey): message.SetValue is lame, why doesn't attr access work as in
     # other places? Fix it.
-    message = kegboard.SetOutputCommand()
-    message.SetValue('output_id', output_id)
-    message.SetValue('output_mode', output_mode)
-    self._reader.WriteMessage(message)
+    msg = kegboard.SetOutputCommand()
+    msg.SetValue('output_id', output_id)
+    msg.SetValue('output_mode', output_mode)
+    self._kb.post_to_all(message = msg)
 
+class KegnetMonitorThread(util.KegbotThread):
+  def __init__(self, name, kb_main):
+    util.KegbotThread.__init__(self, name)
+    self._kbmain = kb_main
+    self._client = KegboardKegnetClient(self._kbmain)
+
+  def ThreadMain(self):
+    self._logger.info('Starting main loop.')
+    while not self._quit:
+      self._client.Listen()
+    self._client.stop()
 
 class KegboardManagerApp(app.App):
   def __init__(self, name='core'):
@@ -96,6 +107,7 @@ class KegboardManagerApp(app.App):
 
   def _Setup(self):
     app.App._Setup(self)
+    self._AddAppThread(KegnetMonitorThread('kegnet-monitor', self))
 
   def _MainLoop(self):
     self._logger.info('Main loop starting.')
@@ -166,6 +178,11 @@ class KegboardManagerApp(app.App):
 
   def post_message(self, kb, message):
     self._logger.info('Posting message from %s: %s' % (kb, message))
+
+  def post_to_all(self, message):
+    self._logger.info('Posting message to all boards: %s' % message)
+    for kb in self.active_devices():
+      kb.write_message(message)
 
   def handle_message(self, kb, message):
     path = kb.device_path

@@ -115,6 +115,9 @@ class KegnetClient(object):
     message.username = username
     return self.send_message(message)
 
+  def SendRelayEvent(self, event):
+    return self.send_message(event)
+
   def Listen(self):
     while True:
       try:

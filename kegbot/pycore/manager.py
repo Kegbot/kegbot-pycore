@@ -77,6 +77,7 @@ class Manager(object):
 
   def _PublishEvent(self, event):
     """Convenience alias for EventHub.PublishEvent"""
+    self._logger.debug('Publishing event %s' % event)
     self._event_hub.PublishEvent(event)
 
 
@@ -285,6 +286,8 @@ class FlowManager(Manager):
     self._logger.debug('Publishing relay event: flow=%s, enable=%s' % (flow,
         enable))
 				
+    client = kegnet.KegnetClient()
+
     tap = self._tap_manager.GetTap(flow.GetMeterName())
     if not tap:
       # Unknown meter; don't attempt to enable any relays for it
@@ -303,6 +306,7 @@ class FlowManager(Manager):
       mode = kbevent.SetRelayOutputEvent.Mode.DISABLED
     ev = kbevent.SetRelayOutputEvent(output_name=relay, output_mode=mode)
     self._PublishEvent(ev)
+    client.SendRelayEvent(ev)
 
   @EventHandler(kbevent.FlowRequest)
   def _HandleFlowRequestEvent(self, event):
