@@ -77,6 +77,7 @@ class Manager(object):
 
   def _PublishEvent(self, event):
     """Convenience alias for EventHub.PublishEvent"""
+    self._logger.debug('Publishing event %s' % event)
     self._event_hub.PublishEvent(event)
 
 
@@ -284,6 +285,9 @@ class FlowManager(Manager):
   def _PublishRelayEvent(self, flow, enable=True):
     self._logger.debug('Publishing relay event: flow=%s, enable=%s' % (flow,
         enable))
+				
+    client = kegnet.KegnetClient()
+
     tap = self._tap_manager.GetTap(flow.GetMeterName())
     if not tap:
       # Unknown meter; don't attempt to enable any relays for it
@@ -302,6 +306,7 @@ class FlowManager(Manager):
       mode = kbevent.SetRelayOutputEvent.Mode.DISABLED
     ev = kbevent.SetRelayOutputEvent(output_name=relay, output_mode=mode)
     self._PublishEvent(ev)
+    client.SendRelayEvent(ev)
 
   @EventHandler(kbevent.FlowRequest)
   def _HandleFlowRequestEvent(self, event):
@@ -556,15 +561,20 @@ class AuthenticationManager(Manager):
       username = token.get('username')
     except kbapi.NotFoundError:
       pass
+	  
+    client = kegnet.KegnetClient()  
 
     if not username:
+      client.SendUserAuthenticated('')
       self._logger.info('Token not assigned: %s' % record)
       return
 
     if not token.enabled:
+      client.SendUserAuthenticated('')
       self._logger.info('Token disabled: %s' % record)
       return
 
+    client.SendUserAuthenticated(username)  
     max_idle = common_defs.AUTH_DEVICE_MAX_IDLE_SECS.get(record.auth_device)
     if max_idle is None:
       max_idle = common_defs.AUTH_DEVICE_MAX_IDLE_SECS['default']

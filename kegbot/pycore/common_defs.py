@@ -21,7 +21,7 @@
 ### Drink-related constants
 
 # Don't record teeny drinks
-MIN_VOLUME_TO_RECORD = 10
+MIN_VOLUME_TO_RECORD = 35
 
 # The maximum difference between consecutive meter readings that is considered
 # valid.
