@@ -20,6 +20,7 @@
 
 """A Kegnet client that sends a fake flow."""
 
+from builtins import object
 import gflags
 import math
 import time
@@ -56,7 +57,7 @@ gflags.DEFINE_boolean('explicit_start_stop', False,
     'Setting to False will cause the flow to end when the core '
     'has detected it as idle.')
 
-class SmoothFlow:
+class SmoothFlow(object):
   def __init__(self, num_ticks, num_steps):
     self._total_ticks = num_ticks
     self._step_amt = int(math.ceil(float(num_ticks) / float(num_steps)))

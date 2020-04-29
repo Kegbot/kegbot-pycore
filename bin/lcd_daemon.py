@@ -21,9 +21,13 @@
 """Kegbot LCD daemon."""
 from __future__ import print_function
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
 from future.utils import raise_
 import gflags
-import Queue
+import queue
 import sys
 import time
 
@@ -81,7 +85,7 @@ gflags.DEFINE_integer('krest_update_interval', 60,
     'by the Kegweb REST client.', lower_bound=10)
 
 
-class KegUi:
+class KegUi(object):
   STATE_MAIN = 'main'
   STATE_POUR = 'pour'
 

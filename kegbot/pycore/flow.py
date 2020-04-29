@@ -18,10 +18,11 @@
 
 """Module for the Flow data structure."""
 
+from builtins import object
 import datetime
 from . import kbevent
 
-class Flow:
+class Flow(object):
   """An object that holds data about a pour while it is active."""
   def __init__(self, meter_name, flow_id, username=None, max_idle_secs=10, when=None):
     self._meter_name = meter_name

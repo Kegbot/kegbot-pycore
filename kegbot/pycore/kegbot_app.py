@@ -27,6 +27,7 @@ system.
 For more information, please see the kegbot documentation.
 """
 
+from builtins import object
 import logging
 import time
 
@@ -81,7 +82,7 @@ class KegbotEnv(object):
 
   def _AttachListeners(self):
     for mgr in self._AllManagers():
-      for event_type, methods in mgr.GetEventHandlers().iteritems():
+      for event_type, methods in mgr.GetEventHandlers().items():
         for method in methods:
           self._event_hub.Subscribe(event_type, method)
 

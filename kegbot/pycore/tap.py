@@ -18,6 +18,7 @@
 
 """Module for the Tap data structure."""
 
+from builtins import object
 class Tap(object):
   """An object that holds data about a configured beverage tap."""
   def __init__(self, name, ml_per_tick, relay_name=None):

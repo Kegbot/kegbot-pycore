@@ -24,9 +24,13 @@ This module implements a very simple inter-process event passing system
 
 from __future__ import absolute_import
 
+from future import standard_library
+standard_library.install_aliases()
+from past.builtins import basestring
+from builtins import object
 from future.utils import raise_
 import logging
-import Queue
+import queue
 import types
 
 import gflags
@@ -47,7 +51,7 @@ class Event(util.BaseMessage):
 
   def ToDict(self):
     data = {}
-    for field_name, value in self._values.iteritems():
+    for field_name, value in self._values.items():
       data[field_name] = value
 
     ret = {
@@ -75,7 +79,7 @@ class MeterUpdate(Event):
   reading = EventField()
 
 class FlowUpdate(Event):
-  class FlowState:
+  class FlowState(object):
     ACTIVE = "active"
     IDLE = "idle"
     COMPLETED = "completed"
@@ -97,7 +101,7 @@ class DrinkCreatedEvent(Event):
   username = EventField()
 
 class TokenAuthEvent(Event):
-  class TokenState:
+  class TokenState(object):
     ADDED = "added"
     REMOVED = "removed"
   meter_name = EventField()
@@ -110,7 +114,7 @@ class ThermoEvent(Event):
   sensor_value = EventField()
 
 class FlowRequest(Event):
-  class Action:
+  class Action(object):
     START_FLOW = "start_flow"
     STOP_FLOW = "stop_flow"
     REPORT_STATUS = "report_status"
@@ -127,7 +131,7 @@ class HeartbeatMinuteEvent(Event):
   pass
 
 class SetRelayOutputEvent(Event):
-  class Mode:
+  class Mode(object):
     ENABLED = "enabled"
     DISABLED = "disabled"
   output_name = EventField()
@@ -148,7 +152,7 @@ def DecodeEvent(msg):
   if event_name not in EVENT_NAME_TO_CLASS:
     raise_(ValueError, "Unknown event: %s" % event_name)
   inst = EVENT_NAME_TO_CLASS[event_name]()
-  for k, v in msg['data'].iteritems():
+  for k, v in msg['data'].items():
     setattr(inst, k, v)
   return inst
 
@@ -158,7 +162,7 @@ class EventHub(object):
   def __init__(self, debug=False):
     self._debug = debug or FLAGS.debug_events
     self._subscriptions = {}
-    self._event_queue = Queue.Queue()
+    self._event_queue = queue.Queue()
     self._logger = logging.getLogger('eventhub')
 
   def Subscribe(self, event_cls, cb):
@@ -187,7 +191,7 @@ class EventHub(object):
     """Wait for a new event to be enqueued."""
     try:
       ev = self._event_queue.get(block=True, timeout=timeout)
-    except Queue.Empty:
+    except queue.Empty:
       ev = None
     return ev
 
@@ -212,7 +216,7 @@ class EventHub(object):
       try:
         self._Dispatch(self._event_queue.get_nowait())
         count += 1
-      except Queue.Empty:
+      except queue.Empty:
         break
     return count
 

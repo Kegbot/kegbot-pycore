@@ -22,6 +22,7 @@
 # external ones (like FlowUpdate).
 # TODO(mikey): also raise an exception on socket errors
 
+from builtins import object
 import gflags
 import logging
 import time

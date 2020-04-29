@@ -18,6 +18,7 @@
 
 """Utility module for summing flows."""
 
+from builtins import object
 import logging
 
 class FlowMeter(object):
@@ -45,7 +46,7 @@ class FlowMeter(object):
     The value `ticks` is always saved as `_last_ticks` for use in the next
     report.
     """
-    ticks = long(ticks)
+    ticks = int(ticks)
     self._logger.info('SetTicks: ticks=%s last=%s total=%s' % (
         ticks, self._last_ticks, self._total_ticks))
 

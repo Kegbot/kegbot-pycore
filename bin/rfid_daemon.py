@@ -20,6 +20,8 @@
 
 """Phidget RFID monitor authentication module."""
 
+from builtins import str
+from builtins import object
 import gflags
 import logging
 import os
@@ -48,7 +50,7 @@ FLAGS = gflags.FLAGS
 FLAGS.SetDefault('tap_name', common_defs.ALIAS_ALL_TAPS)
 
 
-class RfidEventHandler:
+class RfidEventHandler(object):
   """Collection of Phidget RFID event handlers to report status to kegnet."""
 
   def __init__(self, client, rfid):

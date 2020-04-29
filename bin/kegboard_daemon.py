@@ -36,7 +36,9 @@ and temperature events).  This is accomplished through Redis, which must be
 running locally.
 """
 
-import Queue
+from future import standard_library
+standard_library.install_aliases()
+import queue
 
 import gflags
 import serial
@@ -110,12 +112,12 @@ class KegboardManagerApp(app.App):
     else:
       devices = kegboard.find_devices()
 
-    new_devices = [d for d in devices if d not in self.status_by_path.keys()]
+    new_devices = [d for d in devices if d not in list(self.status_by_path.keys())]
     for d in new_devices:
       self._logger.info('Device added: %s' % d)
       self.add_device(d)
 
-    removed_devices = [d for d in self.status_by_path.keys() if d not in devices]
+    removed_devices = [d for d in list(self.status_by_path.keys()) if d not in devices]
     for d in removed_devices:
       self._logger.info('Device removed: %s' % d)
       self.remove_device(d)
@@ -152,7 +154,7 @@ class KegboardManagerApp(app.App):
     return self.name_by_path.get(path, 'unknown')
 
   def active_devices(self):
-    for k, v in self.devices_by_path.iteritems():
+    for k, v in self.devices_by_path.items():
       if self.get_status(k) in (STATUS_CONNECTING, STATUS_CONNECTED):
         yield v
 
@@ -181,7 +183,7 @@ class KegboardManagerApp(app.App):
         name = name.lower()
         self._logger.info('Device %s is named: %s' % (kb, name))
 
-        if name in self.name_by_path.values():
+        if name in list(self.name_by_path.values()):
           self._logger.warning('Device with this name already exists! Disabling it.')
           self.status_by_path[path] = STATUS_NEED_UPDATE
         else:
