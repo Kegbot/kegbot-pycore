@@ -31,18 +31,18 @@ class FlowManagerTestCase(unittest.TestCase):
     # Our new device should have accumulated 0 volume thus far.
     tap = self.tap_manager.GetTap('flow0')
     meter = self.flow_manager.GetMeter('flow0')
-    self.assertEqual(meter.GetTicks(), 0L)
+    self.assertEqual(meter.GetTicks(), 0)
 
     # Report an instantaneous reading of 2000 ticks. Since this is the first
     # reading, this should cause no change in the device volume.
     flow, is_new = self.flow_manager.UpdateFlow(tap.GetName(), 2000)
-    self.assertEqual(meter.GetTicks(), 0L)
+    self.assertEqual(meter.GetTicks(), 0)
     self.assertIsNotNone(flow)
     self.assertTrue(is_new)
 
     # Report another instantaneous reading, which should now increment the flow
     new_flow, is_new = self.flow_manager.UpdateFlow(tap.GetName(), 2100)
-    self.assertEqual(meter.GetTicks(), 100L)
+    self.assertEqual(meter.GetTicks(), 100)
     self.assertFalse(is_new)
     self.assertIs(flow, new_flow)
 

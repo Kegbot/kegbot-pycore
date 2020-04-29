@@ -30,12 +30,11 @@ def setup_package():
         'bin/test_flow.py',
       ],
       install_requires = [
-        'kegbot-pyutils == 0.1.7',
-        'kegbot-api >= 0.1.17',
-        'kegbot-kegboard == 1.1.2',
-        'redis >= 2.9.1, < 3.0',
-
-        'python-gflags == 2.0',
+        'kegbot-pyutils',
+        'kegbot-api',
+        'kegboard',
+        'redis',
+        'python-gflags',
       ],
       include_package_data = True,
   )

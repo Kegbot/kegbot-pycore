@@ -90,7 +90,7 @@ class WebBackend(Backend):
     min_val = common_defs.THERMO_SENSOR_RANGE[0]
     max_val = common_defs.THERMO_SENSOR_RANGE[1]
     if temperature < min_val or temperature > max_val:
-      raise ValueError, 'Temperature out of bounds'
+      raise ValueError('Temperature out of bounds')
 
     try:
       return self._client.log_sensor_reading(sensor_name, temperature, when)

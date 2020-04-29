@@ -34,7 +34,7 @@ class Flow:
     self._start_time = when
     self._end_time = when
     self._last_log_time = None
-    self._total_ticks = 0L
+    self._total_ticks = 0
     self._volume_ml = None 
 
   def __str__(self):

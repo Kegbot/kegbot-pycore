@@ -24,6 +24,7 @@ This module implements a very simple inter-process event passing system
 
 from __future__ import absolute_import
 
+from future.utils import raise_
 import logging
 import Queue
 import types
@@ -145,7 +146,7 @@ def DecodeEvent(msg):
     msg = kbjson.loads(msg)
   event_name = msg.get('event')
   if event_name not in EVENT_NAME_TO_CLASS:
-    raise ValueError, "Unknown event: %s" % event_name
+    raise_(ValueError, "Unknown event: %s" % event_name)
   inst = EVENT_NAME_TO_CLASS[event_name]()
   for k, v in msg['data'].iteritems():
     setattr(inst, k, v)
@@ -165,7 +166,7 @@ class EventHub(object):
 
     The callback method must take a single argument, "event".
     """
-    if type(event_cls) == types.ClassType:
+    if type(event_cls) == type:
       raise ValueError("event_cls must be a class; is a %s" % type(event_cls))
 
     if event_cls not in self._subscriptions:

@@ -19,7 +19,9 @@
 # along with Pykeg.  If not, see <http://www.gnu.org/licenses/>.
 
 """Kegbot LCD daemon."""
+from __future__ import print_function
 
+from future.utils import raise_
 import gflags
 import Queue
 import sys
@@ -40,8 +42,8 @@ except ImportError:
 try:
   import lcdui
 except ImportError:
-  print>>sys.stderr, "Error: lcdui could not be imported."
-  print>>sys.stderr, "(Try: sudo easy_install --upgrade pylcdui)"
+  print("Error: lcdui could not be imported.", file=sys.stderr)
+  print("(Try: sudo easy_install --upgrade pylcdui)", file=sys.stderr)
   sys.exit(1)
 
 from lcdui.ui import frame
@@ -95,7 +97,7 @@ class KegUi:
       self._lcdobj = MatrixOrbital.MatrixOrbitalDisplay(path,
           FLAGS.lcd_baud_rate)
     else:
-      raise ValueError, "Bad device type: %s" % FLAGS.lcd_device_type
+      raise_(ValueError, "Bad device type: %s" % FLAGS.lcd_device_type)
 
     self._lcdui = ui.LcdUi(self._lcdobj, FLAGS.backlight_timeout)
     self._last_flow_status = None
@@ -283,7 +285,7 @@ class KrestUpdaterThread(util.KegbotThread):
           username = str(last_drink.user_id)
         date = last_drink.time
         self._lcdui.UpdateLastDrink(username, last_drink.volume_ml, date)
-      except IOError, e:
+      except IOError as e:
         self._logger.warning('Could not connect to kegweb: %s' % e)
       time.sleep(FLAGS.krest_update_interval)
     self._logger.info('Exited main loop.')

@@ -39,18 +39,18 @@ class FlowMeterTestCase(unittest.TestCase):
     """Create a new flow device, perform basic operations on it."""
     # Our new device should have accumulated 0 ticks thus far.
     reading = self.meter.GetTicks()
-    self.assertEqual(reading, 0L)
+    self.assertEqual(reading, 0)
 
     # Report an instantaneous reading of 2000 ticks. Since this is the first
     # reading, this should cause no change in the device ticks.
     self.meter.SetTicks(2000)
     reading = self.meter.GetTicks()
-    self.assertEqual(reading, 0L)
+    self.assertEqual(reading, 0)
 
     # Report another instantaneous reading, which should now increment the flow
     self.meter.SetTicks(2100)
     reading = self.meter.GetTicks()
-    self.assertEqual(reading, 100L)
+    self.assertEqual(reading, 100)
 
     # The FlowManager saves the last reading value; check it.
     last_reading = self.meter.GetLastReading()
@@ -64,7 +64,7 @@ class FlowMeterTestCase(unittest.TestCase):
     self.meter.SetTicks(new_reading)
     # The illegal update should not affect the ticks.
     vol = self.meter.GetTicks()
-    self.assertEqual(vol, 100L)
+    self.assertEqual(vol, 100)
     # The value of the last update should be recorded, however.
     last_reading = self.meter.GetLastReading()
     self.assertEqual(last_reading, new_reading)
