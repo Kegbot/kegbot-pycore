@@ -1,23 +1,6 @@
-# Copyright 2012 Mike Wakerly <opensource@hoho.com>
-#
-# This file is part of the Pykeg package of the Kegbot project.
-# For more information on Pykeg or Kegbot, see http://kegbot.org/
-#
-# Pykeg is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
-#
-# Pykeg is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Pykeg.  If not, see <http://www.gnu.org/licenses/>.
-
 """Kegbot API implementation of Backend."""
 
+from builtins import object
 import logging
 import socket
 
@@ -90,7 +73,7 @@ class WebBackend(Backend):
     min_val = common_defs.THERMO_SENSOR_RANGE[0]
     max_val = common_defs.THERMO_SENSOR_RANGE[1]
     if temperature < min_val or temperature > max_val:
-      raise ValueError, 'Temperature out of bounds'
+      raise ValueError('Temperature out of bounds')
 
     try:
       return self._client.log_sensor_reading(sensor_name, temperature, when)

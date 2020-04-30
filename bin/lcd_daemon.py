@@ -1,27 +1,15 @@
 #!/usr/bin/env python
-#
-# Copyright 2010 Mike Wakerly <opensource@hoho.com>
-#
-# This file is part of the Pykeg package of the Kegbot project.
-# For more information on Pykeg or Kegbot, see http://kegbot.org/
-#
-# Pykeg is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
-#
-# Pykeg is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Pykeg.  If not, see <http://www.gnu.org/licenses/>.
 
 """Kegbot LCD daemon."""
+from __future__ import print_function
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
+from future.utils import raise_
 import gflags
-import Queue
+import queue
 import sys
 import time
 
@@ -40,8 +28,8 @@ except ImportError:
 try:
   import lcdui
 except ImportError:
-  print>>sys.stderr, "Error: lcdui could not be imported."
-  print>>sys.stderr, "(Try: sudo easy_install --upgrade pylcdui)"
+  print("Error: lcdui could not be imported.", file=sys.stderr)
+  print("(Try: sudo easy_install --upgrade pylcdui)", file=sys.stderr)
   sys.exit(1)
 
 from lcdui.ui import frame
@@ -79,7 +67,7 @@ gflags.DEFINE_integer('krest_update_interval', 60,
     'by the Kegweb REST client.', lower_bound=10)
 
 
-class KegUi:
+class KegUi(object):
   STATE_MAIN = 'main'
   STATE_POUR = 'pour'
 
@@ -95,7 +83,7 @@ class KegUi:
       self._lcdobj = MatrixOrbital.MatrixOrbitalDisplay(path,
           FLAGS.lcd_baud_rate)
     else:
-      raise ValueError, "Bad device type: %s" % FLAGS.lcd_device_type
+      raise_(ValueError, "Bad device type: %s" % FLAGS.lcd_device_type)
 
     self._lcdui = ui.LcdUi(self._lcdobj, FLAGS.backlight_timeout)
     self._last_flow_status = None
@@ -283,7 +271,7 @@ class KrestUpdaterThread(util.KegbotThread):
           username = str(last_drink.user_id)
         date = last_drink.time
         self._lcdui.UpdateLastDrink(username, last_drink.volume_ml, date)
-      except IOError, e:
+      except IOError as e:
         self._logger.warning('Could not connect to kegweb: %s' % e)
       time.sleep(FLAGS.krest_update_interval)
     self._logger.info('Exited main loop.')

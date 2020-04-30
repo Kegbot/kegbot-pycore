@@ -1,27 +1,10 @@
-# Copyright 2008-2010 Mike Wakerly <opensource@hoho.com>
-#
-# This file is part of the Pykeg package of the Kegbot project.
-# For more information on Pykeg or Kegbot, see http://kegbot.org/
-#
-# Pykeg is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
-#
-# Pykeg is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Pykeg.  If not, see <http://www.gnu.org/licenses/>.
-
 """Kegnet client/server implementation."""
 
 # TODO(mikey): need to isolate internal-only events (like QuitEvent) from
 # external ones (like FlowUpdate).
 # TODO(mikey): also raise an exception on socket errors
 
+from builtins import object
 import gflags
 import logging
 import time
@@ -44,8 +27,10 @@ gflags.DEFINE_string('redis_channel_name', 'kegnet',
     'Pub/sub channel name.')
 
 class KegnetClient(object):
-  def __init__(self, host=FLAGS.redis_host, port=FLAGS.redis_port,
-      channel_name=FLAGS.redis_channel_name):
+  def __init__(self, host=None, port=None, channel_name=None):
+    host = host or FLAGS.redis_host
+    port = port or FLAGS.redis_port
+    channel_name = channel_name or FLAGS.redis_channel_name
     self._redis = redis.Redis(host=host, port=port)
     self._channel_name = channel_name
     self._logger = logging.getLogger('kegnet')

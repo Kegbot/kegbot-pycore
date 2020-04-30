@@ -1,13 +1,15 @@
 language: python
 python:
-  - "2.7"
+  - "3.8"
 
 services:
   - redis-server
 
 install:
-  - pip install nose --use-mirrors
-  - pip install . --use-mirrors
+  - pip install pipenv
+  - pipenv install --dev
+  - python setup.py develop
 
 script:
-  - nosetests  --traverse-namespace --first-package-wins -e "^kegboard|^util"
+  - pipenv run pytest
+

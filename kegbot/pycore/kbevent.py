@@ -1,21 +1,3 @@
-# Copyright 2009 Mike Wakerly <opensource@hoho.com>
-#
-# This file is part of the Pykeg package of the Kegbot project.
-# For more information on Pykeg or Kegbot, see http://kegbot.org/
-#
-# Pykeg is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
-#
-# Pykeg is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Pykeg.  If not, see <http://www.gnu.org/licenses/>.
-
 """Simple event-passing mechanisms.
 
 This module implements a very simple inter-process event passing system
@@ -24,13 +6,18 @@ This module implements a very simple inter-process event passing system
 
 from __future__ import absolute_import
 
+from future import standard_library
+standard_library.install_aliases()
+from past.builtins import basestring
+from builtins import object
+from future.utils import raise_
+import json
 import logging
-import Queue
+import queue
 import types
 
 import gflags
 
-from kegbot.util import kbjson
 from kegbot.util import util
 
 FLAGS = gflags.FLAGS
@@ -38,16 +25,27 @@ FLAGS = gflags.FLAGS
 gflags.DEFINE_boolean('debug_events', False,
     'If true, logs debugging information about internal events.')
 
-class Event(util.BaseMessage):
+class Event(metaclass=util.DeclarativeMetaclass):
   def __init__(self, initial=None, encoded=None, **kwargs):
-    util.BaseMessage.__init__(self, initial, **kwargs)
+    self._values = {}
     if encoded is not None:
       self.DecodeFromString(encoded)
 
+  def __setattr__(self, name, value):
+    if name != '_values' and name in self.fields:
+      self._values[name] = value
+    else:
+      super(Event, self).__setattr__(name, value)
+
+  def __getattr__(self, name):
+    if name in self.__class__.fields:
+      return self._values.get(name, None)
+    raise AttributeError('No such field {}'.format(name))
+
   def ToDict(self):
     data = {}
-    for field_name, value in self._values.iteritems():
-      data[field_name] = value
+    for field_name in self.fields.keys():
+      data[field_name] = getattr(self, field_name, None)
 
     ret = {
       'event': self.__class__.__name__,
@@ -56,9 +54,10 @@ class Event(util.BaseMessage):
     return ret
 
   def ToJson(self, indent=2):
-    return kbjson.dumps(self.ToDict(), indent=indent)
+    return json.dumps(self.ToDict(), indent=indent)
 
-EventField = util.BaseField
+class EventField(util.Field):
+  pass
 
 class Ping(Event):
   pass
@@ -74,7 +73,7 @@ class MeterUpdate(Event):
   reading = EventField()
 
 class FlowUpdate(Event):
-  class FlowState:
+  class FlowState(object):
     ACTIVE = "active"
     IDLE = "idle"
     COMPLETED = "completed"
@@ -96,7 +95,7 @@ class DrinkCreatedEvent(Event):
   username = EventField()
 
 class TokenAuthEvent(Event):
-  class TokenState:
+  class TokenState(object):
     ADDED = "added"
     REMOVED = "removed"
   meter_name = EventField()
@@ -109,7 +108,7 @@ class ThermoEvent(Event):
   sensor_value = EventField()
 
 class FlowRequest(Event):
-  class Action:
+  class Action(object):
     START_FLOW = "start_flow"
     STOP_FLOW = "stop_flow"
     REPORT_STATUS = "report_status"
@@ -126,7 +125,7 @@ class HeartbeatMinuteEvent(Event):
   pass
 
 class SetRelayOutputEvent(Event):
-  class Mode:
+  class Mode(object):
     ENABLED = "enabled"
     DISABLED = "disabled"
   output_name = EventField()
@@ -142,12 +141,12 @@ for cls in Event.__subclasses__():
 
 def DecodeEvent(msg):
   if isinstance(msg, basestring):
-    msg = kbjson.loads(msg)
+    msg = json.loads(msg)
   event_name = msg.get('event')
   if event_name not in EVENT_NAME_TO_CLASS:
-    raise ValueError, "Unknown event: %s" % event_name
+    raise_(ValueError, "Unknown event: %s" % event_name)
   inst = EVENT_NAME_TO_CLASS[event_name]()
-  for k, v in msg['data'].iteritems():
+  for k, v in msg['data'].items():
     setattr(inst, k, v)
   return inst
 
@@ -157,7 +156,7 @@ class EventHub(object):
   def __init__(self, debug=False):
     self._debug = debug or FLAGS.debug_events
     self._subscriptions = {}
-    self._event_queue = Queue.Queue()
+    self._event_queue = queue.Queue()
     self._logger = logging.getLogger('eventhub')
 
   def Subscribe(self, event_cls, cb):
@@ -165,7 +164,7 @@ class EventHub(object):
 
     The callback method must take a single argument, "event".
     """
-    if type(event_cls) == types.ClassType:
+    if type(event_cls) == type:
       raise ValueError("event_cls must be a class; is a %s" % type(event_cls))
 
     if event_cls not in self._subscriptions:
@@ -186,7 +185,7 @@ class EventHub(object):
     """Wait for a new event to be enqueued."""
     try:
       ev = self._event_queue.get(block=True, timeout=timeout)
-    except Queue.Empty:
+    except queue.Empty:
       ev = None
     return ev
 
@@ -211,7 +210,7 @@ class EventHub(object):
       try:
         self._Dispatch(self._event_queue.get_nowait())
         count += 1
-      except Queue.Empty:
+      except queue.Empty:
         break
     return count
 

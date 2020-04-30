@@ -1,0 +1,19 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pytest = "*"
+
+[packages]
+future = "*"
+python-gflags = "*"
+redis = "*"
+kegbot-api = "*"
+kegbot-pyutils = "*"
+six = "*"
+kegbot-kegboard = "*"
+
+[requires]
+python_version = "3"

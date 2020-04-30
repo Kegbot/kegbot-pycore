@@ -7,8 +7,6 @@ You can find more information at: http://kegbot.org/docs/pycore/
 
 ## License and Copyright
 
-All code is offered under the **GPLv2** license, unless otherwise noted.  Please see
-``LICENSE.txt`` for the full license.
-
-All code and documentation are **Copyright 2003-2012 Mike Wakerly**, unless otherwise noted.
+All code is offered under the **MIT** license, unless otherwise noted.  Please
+see `LICENSE.txt` for the full license.
 

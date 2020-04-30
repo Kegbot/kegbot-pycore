@@ -1,22 +1,4 @@
 #!/usr/bin/env python
-#
-# Copyright 2009 Mike Wakerly <opensource@hoho.com>
-#
-# This file is part of the Pykeg package of the Kegbot project.
-# For more information on Pykeg or Kegbot, see http://kegbot.org/
-#
-# Pykeg is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
-#
-# Pykeg is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Pykeg.  If not, see <http://www.gnu.org/licenses/>.
 
 """Kegboard daemon.
 
@@ -36,7 +18,9 @@ and temperature events).  This is accomplished through Redis, which must be
 running locally.
 """
 
-import Queue
+from future import standard_library
+standard_library.install_aliases()
+import queue
 
 import gflags
 import serial
@@ -110,12 +94,12 @@ class KegboardManagerApp(app.App):
     else:
       devices = kegboard.find_devices()
 
-    new_devices = [d for d in devices if d not in self.status_by_path.keys()]
+    new_devices = [d for d in devices if d not in list(self.status_by_path.keys())]
     for d in new_devices:
       self._logger.info('Device added: %s' % d)
       self.add_device(d)
 
-    removed_devices = [d for d in self.status_by_path.keys() if d not in devices]
+    removed_devices = [d for d in list(self.status_by_path.keys()) if d not in devices]
     for d in removed_devices:
       self._logger.info('Device removed: %s' % d)
       self.remove_device(d)
@@ -124,7 +108,7 @@ class KegboardManagerApp(app.App):
     kb = kegboard.Kegboard(path)
     try:
       kb.open()
-    except OSError, e:
+    except OSError as e:
       # TODO(mikey): Back off and eventually blacklist device.
       self._logger.warning('Error opening device at path {}: {}'.format(path, e))
       return
@@ -152,7 +136,7 @@ class KegboardManagerApp(app.App):
     return self.name_by_path.get(path, 'unknown')
 
   def active_devices(self):
-    for k, v in self.devices_by_path.iteritems():
+    for k, v in self.devices_by_path.items():
       if self.get_status(k) in (STATUS_CONNECTING, STATUS_CONNECTED):
         yield v
 
@@ -181,7 +165,7 @@ class KegboardManagerApp(app.App):
         name = name.lower()
         self._logger.info('Device %s is named: %s' % (kb, name))
 
-        if name in self.name_by_path.values():
+        if name in list(self.name_by_path.values()):
           self._logger.warning('Device with this name already exists! Disabling it.')
           self.status_by_path[path] = STATUS_NEED_UPDATE
         else:
