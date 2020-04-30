@@ -7,6 +7,12 @@ verify_ssl = true
 
 [packages]
 future = "*"
+python-gflags = "*"
+redis = "*"
+kegbot-api = "*"
+kegbot-pyutils = "*"
+six = "*"
+kegbot-kegboard = "*"
 
 [requires]
-python_version = "2.7"
+python_version = "3"

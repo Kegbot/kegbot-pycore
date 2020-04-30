@@ -45,8 +45,10 @@ gflags.DEFINE_string('redis_channel_name', 'kegnet',
     'Pub/sub channel name.')
 
 class KegnetClient(object):
-  def __init__(self, host=FLAGS.redis_host, port=FLAGS.redis_port,
-      channel_name=FLAGS.redis_channel_name):
+  def __init__(self, host=None, port=None, channel_name=None):
+    host = host or FLAGS.redis_host
+    port = port or FLAGS.redis_port
+    channel_name = channel_name or FLAGS.redis_channel_name
     self._redis = redis.Redis(host=host, port=port)
     self._channel_name = channel_name
     self._logger = logging.getLogger('kegnet')

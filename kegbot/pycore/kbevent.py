@@ -29,13 +29,13 @@ standard_library.install_aliases()
 from past.builtins import basestring
 from builtins import object
 from future.utils import raise_
+import json
 import logging
 import queue
 import types
 
 import gflags
 
-from kegbot.util import kbjson
 from kegbot.util import util
 
 FLAGS = gflags.FLAGS
@@ -43,16 +43,27 @@ FLAGS = gflags.FLAGS
 gflags.DEFINE_boolean('debug_events', False,
     'If true, logs debugging information about internal events.')
 
-class Event(util.BaseMessage):
+class Event(metaclass=util.DeclarativeMetaclass):
   def __init__(self, initial=None, encoded=None, **kwargs):
-    util.BaseMessage.__init__(self, initial, **kwargs)
+    self._values = {}
     if encoded is not None:
       self.DecodeFromString(encoded)
 
+  def __setattr__(self, name, value):
+    if name != '_values' and name in self.fields:
+      self._values[name] = value
+    else:
+      super(Event, self).__setattr__(name, value)
+
+  def __getattr__(self, name):
+    if name in self.__class__.fields:
+      return self._values.get(name, None)
+    raise AttributeError('No such field {}'.format(name))
+
   def ToDict(self):
     data = {}
-    for field_name, value in self._values.items():
-      data[field_name] = value
+    for field_name in self.fields.keys():
+      data[field_name] = getattr(self, field_name, None)
 
     ret = {
       'event': self.__class__.__name__,
@@ -61,9 +72,10 @@ class Event(util.BaseMessage):
     return ret
 
   def ToJson(self, indent=2):
-    return kbjson.dumps(self.ToDict(), indent=indent)
+    return json.dumps(self.ToDict(), indent=indent)
 
-EventField = util.BaseField
+class EventField(util.Field):
+  pass
 
 class Ping(Event):
   pass
@@ -147,7 +159,7 @@ for cls in Event.__subclasses__():
 
 def DecodeEvent(msg):
   if isinstance(msg, basestring):
-    msg = kbjson.loads(msg)
+    msg = json.loads(msg)
   event_name = msg.get('event')
   if event_name not in EVENT_NAME_TO_CLASS:
     raise_(ValueError, "Unknown event: %s" % event_name)
