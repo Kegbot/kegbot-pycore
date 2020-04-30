@@ -18,6 +18,7 @@ setup(
   author='The Kegbot Project Contributors',
   author_email='info@kegbot.org',
   url='https://kegbot.org/',
+  license='MIT',
   packages = find_packages(exclude=['testdata']),
   namespace_packages = ['kegbot'],
   scripts = [
