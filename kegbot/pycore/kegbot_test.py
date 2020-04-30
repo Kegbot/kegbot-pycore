@@ -10,6 +10,7 @@ from kegbot.util import util
 from . import backend
 from . import kbevent
 from . import kegbot_app
+from .util import AttrDict
 
 LOGGER = logging.getLogger('unittest')
 
@@ -39,7 +40,7 @@ class TestBackend(backend.Backend):
     }
 
   def GetAllTaps(self):
-    return [util.AttrDict(d) for d in TEST_TAPS]
+    return [AttrDict(d) for d in TEST_TAPS]
 
 class KegbotTestCase(unittest.TestCase):
   def setUp(self):
@@ -60,7 +61,7 @@ class KegbotTestCase(unittest.TestCase):
     tap_manager = self.kb.GetTapManager()
 
     taps = tap_manager.GetAllTaps()
-    self.assertEquals(2, len(taps))
+    self.assertEqual(2, len(taps))
 
   def testPour(self):
     e = kbevent.MeterUpdate()
