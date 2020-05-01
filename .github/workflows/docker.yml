@@ -38,7 +38,6 @@ jobs:
         run: echo ${{ steps.build.outputs.platforms }}
       -
         name: Login to DockerHub Registry
-        if: success() && github.ref == 'refs/heads/master'
         run: echo ${{ secrets.DOCKER_HUB_PASSWORD }} | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
       -
         name: Build
