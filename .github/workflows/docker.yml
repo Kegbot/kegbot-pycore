@@ -42,6 +42,8 @@ jobs:
           docker buildx build \
             --output "type=image,push=false" \
             --platform linux/amd64,linux/arm/v7 \
+            --cache-from=type=registry,ref=kegbot/pycore \
+            --cache-to=type=registry,ref=kegbot/pycore \
             --build-arg "BUILD_DATE=${{ steps.prepare.outputs.build_date }}" \
             --build-arg "GIT_SHORT_SHA=${GITHUB_SHA::8}" \
             --build-arg "VERSION=${{ steps.prepare.outputs.version }}" \
@@ -56,9 +58,10 @@ jobs:
         name: Publish
         if: success() && github.ref == 'refs/heads/master'
         run: |
-          docker buildx build --platform ${{ steps.prepare.outputs.docker_platforms }} \
+          docker buildx build \
             --output "type=image,push=true" \
             --platform linux/amd64,linux/arm/v7 \
+            --cache-from=type=registry,ref=kegbot/pycore \
             --build-arg "BUILD_DATE=${{ steps.prepare.outputs.build_date }}" \
             --build-arg "GIT_SHORT_SHA=${GITHUB_SHA::8}" \
             --build-arg "VERSION=${{ steps.prepare.outputs.version }}" \
