@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 pytest = "*"
+kegbot-pycore = {editable = true,path = "."}
 
 [packages]
 future = "*"
