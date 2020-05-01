@@ -22,7 +22,13 @@ ADD kegbot ./kegbot
 ADD setup.py ./
 RUN python setup.py develop
 
-EXPOSE 8000
+ARG GIT_SHORT_SHA="unknown"
+ARG VERSION="unknown"
+ARG BUILD_DATE="unknown"
+RUN echo "GIT_SHORT_SHA=${GIT_SHORT_SHA}" > /etc/kegbot-pycore-version
+RUN echo "VERSION=${VERSION}" >> /etc/kegbot-pycore-version
+RUN echo "BUILD_DATE=${BUILD_DATE}" >> /etc/kegbot-pycore-version
+
 CMD [ \
    "python", \
    "bin/kegbot_core.py" \

@@ -1,0 +1,10 @@
+# docker-compose for use in continuous integration
+# Not for production!
+
+version: '3'
+services:
+  redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
