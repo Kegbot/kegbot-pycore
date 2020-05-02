@@ -6,6 +6,7 @@ from json.decoder import JSONDecodeError
 
 from kegbot.api import exceptions as api_exceptions
 from kegbot.util import util
+from .util import AttrDict
 from . import kbevent
 from . import kegnet
 
@@ -61,7 +62,7 @@ class SyncThread(CoreThread):
 
     if status:
       event = kbevent.SyncEvent()
-      event.data = status
+      event.data = AttrDict(status)
       hub.PublishEvent(event)
 
     return status
