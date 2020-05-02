@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import asyncore
 import time
+from json.decoder import JSONDecodeError
 
 from kegbot.api import exceptions as api_exceptions
 from kegbot.util import util
@@ -54,7 +55,7 @@ class SyncThread(CoreThread):
       status = self._backend.GetStatus()
       self._logger.debug('Sync complete.')
       self._logger.debug(status)
-    except api_exceptions.Error as e:
+    except (api_exceptions.Error, IOError, JSONDecodeError) as e:
       self._logger.warning('API exception during sync: %s' % e)
       status = {}
 
