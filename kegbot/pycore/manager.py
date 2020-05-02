@@ -104,8 +104,8 @@ class TapManager(Manager):
     new_taps = event.data.get('taps', [])
 
     for tap in new_taps:
-      self._RegisterOrUpdateTap(tap.meter_name, tap.ml_per_tick,
-          relay_name=tap.relay_name)
+      self._RegisterOrUpdateTap(tap['meter_name'], tap['ml_per_tick'],
+          relay_name=tap['relay_name'])
 
   @EventHandler(kbevent.ControllerConnectedEvent)
   def _HandleControllerConnected(self, event):
