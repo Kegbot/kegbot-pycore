@@ -12,6 +12,7 @@ For more information, please see the kegbot documentation.
 from builtins import object
 import logging
 import time
+import os
 
 import gflags
 
@@ -23,6 +24,9 @@ from . import manager
 from . import backend
 
 FLAGS = gflags.FLAGS
+
+FLAGS.SetDefault('api_url', os.environ.get('KEGBOT_API_URL', 'http://localhost:8000/api/'))
+FLAGS.SetDefault('api_key', os.environ.get('KEGBOT_API_KEY', ''))
 
 class KegbotEnv(object):
   """ A class that wraps the context of the kegbot core.

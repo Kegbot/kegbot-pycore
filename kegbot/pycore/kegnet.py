@@ -5,6 +5,7 @@
 # TODO(mikey): also raise an exception on socket errors
 
 from builtins import object
+import os
 import gflags
 import logging
 import time
@@ -17,23 +18,20 @@ from . import kbevent
 
 FLAGS = gflags.FLAGS
 
-gflags.DEFINE_string('redis_host', '127.0.0.1',
-    'IP address or hostname of the Redis service.')
-
-gflags.DEFINE_integer('redis_port', 6379,
-    'Port number for the Redis service on --redis_host.')
+gflags.DEFINE_string('redis_url', os.getenv('KEGBOT_REDIS_URL', 'redis://localhost:6379/0'),
+    'URL of the Redis service.')
 
 gflags.DEFINE_string('redis_channel_name', 'kegnet',
     'Pub/sub channel name.')
 
 class KegnetClient(object):
-  def __init__(self, host=None, port=None, channel_name=None):
-    host = host or FLAGS.redis_host
-    port = port or FLAGS.redis_port
+  def __init__(self, redis_url=None, channel_name=None):
+    redis_url = redis_url or FLAGS.redis_url
     channel_name = channel_name or FLAGS.redis_channel_name
-    self._redis = redis.Redis(host=host, port=port)
+    self._redis = redis.from_url(redis_url)
     self._channel_name = channel_name
     self._logger = logging.getLogger('kegnet')
+    self._logger.info('Connecting to redis at {} '.format(redis_url))
 
   def ping(self):
     """Tests the liveness of the redis connection."""
